@@ -46,6 +46,12 @@
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.5); border-radius: 4px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
     </style>
 </head>
 <body>
@@ -181,6 +187,9 @@
             const [fanNo, setFanNo] = useState('');
             const [isGenerating, setIsGenerating] = useState(false);
             
+            // --- 核心：保存生成的最终高清图片 Base64 ---
+            const [resultImage, setResultImage] = useState(null);
+            
             const containerRef = useRef(null);
             const printRef = useRef(null);
             const [scale, setScale] = useState(1);
@@ -226,20 +235,22 @@
                 if (!printRef.current) return;
                 setIsGenerating(true);
                 try {
-                    // HTML2Canvas 截图，此时画板位于 top-0 且完全透明，彻底杜绝被系统错误裁切
                     const canvas = await html2canvas(printRef.current, { 
                         scale: 2, 
                         useCORS: true, 
                         backgroundColor: '#050505',
                         windowWidth: POSTER_WIDTH
                     });
-                    const link = document.createElement('a');
-                    link.download = `热爱印记_${athlete}_${Date.now()}.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
+                    
+                    // 获取高清图片数据
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    // 彻底废弃 link.download 机制，改为弹出全屏预览模式（绕过安卓微信下载限制）
+                    setResultImage(imgData);
+
                 } catch (error) { 
                     console.error(error); 
-                    alert('生成失败，请重试');
+                    alert('海报生成失败，请刷新页面重试');
                 } finally { 
                     setIsGenerating(false); 
                 }
@@ -375,7 +386,7 @@
             );
 
             return (
-                <div className="min-h-screen flex flex-col items-center pb-12 font-sans bg-black relative">
+                <div className="min-h-screen flex flex-col items-center pb-12 font-sans bg-black relative z-0">
                     <div className="w-full max-w-md p-5 pb-2 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded bg-brand-red flex items-center justify-center"><Icon name="award" className="w-4 h-4 text-white" /></div>
@@ -387,14 +398,14 @@
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
                         
                         {/* 前台预览框：负责根据手机屏幕缩放看效果 */}
-                        <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center" style={{ height: `${POSTER_HEIGHT * scale}px` }}>
+                        <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center z-10" style={{ height: `${POSTER_HEIGHT * scale}px` }}>
                             <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0, width: `${POSTER_WIDTH}px`, height: `${POSTER_HEIGHT}px` }}>
                                 {posterContent}
                             </div>
                         </div>
 
-                        {/* 隐身绝杀画板：挪到屏幕绝对左上角(top-0)，保证完全在可视渲染区内，但用 opacity-0 隐身，坚决防止移动端渲染裁切 */}
-                        <div className="absolute top-0 left-0 z-[-100] opacity-0 pointer-events-none" aria-hidden="true">
+                        {/* 隐身绝杀画板：放在绝对定位的最底层，被外层的 bg-black 遮盖，安全又完美，不影响引擎截图 */}
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-[-1]" aria-hidden="true">
                             <div ref={printRef}>
                                 {posterContent}
                             </div>
@@ -486,12 +497,33 @@
                                 </div>
                             </div>
                         </div>
-                        <button onClick={handleDownload} disabled={!image || isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl font-sans ${!image ? 'bg-gray-800 text-gray-600' : 'bg-brand-red text-white active:scale-95'}`}>{isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 保存我的海报</>}</button>
+                        <button onClick={handleDownload} disabled={!image || isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl font-sans ${!image ? 'bg-gray-800 text-gray-600' : 'bg-brand-red text-white active:scale-95'}`}>
+                            {isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 保存我的海报</>}
+                        </button>
                         <div className="text-center font-sans">
-                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">长按图片可保存分享至朋友圈/小红书</p>
-                            <p className="text-[10px] text-gray-600 font-bold tracking-widest mt-1">关注公众号：热爱印记，获取更多专属应援模板</p>
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">关注公众号：热爱印记，获取更多专属应援模板</p>
                         </div>
                     </div>
+
+                    {/* --- 终极保存方案：防封杀弹窗全屏预览，长按保存 --- */}
+                    {resultImage && (
+                        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in">
+                            <div className="w-full max-w-sm flex flex-col items-center">
+                                {/* 高清海报展示区，用户长按这里保存 */}
+                                <img src={resultImage} alt="专属海报" className="w-full rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] mb-6" style={{ pointerEvents: 'auto' }} />
+                                
+                                {/* 引导动画 */}
+                                <div className="bg-brand-red text-white px-6 py-3 rounded-full font-bold text-sm mb-5 animate-bounce shadow-lg flex items-center gap-2">
+                                    <Icon name="download" className="w-4 h-4" /> 👇 请长按上方海报保存到相册
+                                </div>
+                                
+                                {/* 关闭按钮 */}
+                                <button onClick={() => setResultImage(null)} className="text-gray-400 text-sm border-b border-gray-600 pb-1 hover:text-white transition-colors">
+                                    返回继续修改
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
