@@ -125,27 +125,34 @@
 
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ marginBottom: '16px' }}>
-                                        <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', marginBottom: '8px', letterSpacing: '0.05em', fontFamily: F_SERIF }}>
+                                        {/* 赛事独立一行，强制行高为 1 */}
+                                        <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', marginBottom: '8px', letterSpacing: '0.05em', fontFamily: F_SERIF, lineHeight: 1 }}>
                                             {eventInfo}
                                         </div>
+                                        {/* 运动员+成绩 Flex Baseline 对齐，各自固定行高 1 */}
                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
                                             <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: F_SERIF }}>{athlete}</h2>
                                             <span style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', margin: 0, lineHeight: 1, fontFamily: F_SANS }}>{score}</span>
                                         </div>
-                                        <p style={{ fontSize: '13px', lineHeight: 1.6, borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: F_SERIF }}>
+                                        {/* 引言使用 wordBreak: 'break-all' 防止溢出 */}
+                                        <p style={{ fontSize: '13px', lineHeight: 1.6, borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF }}>
                                             “{quote}”
                                         </p>
                                     </div>
 
-                                    <div style={{ backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', boxSizing: 'border-box' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '4px' }}>
+                                    {/* 底部信息卡固定高度，左侧垂直居中对齐，右侧自适应居中 */}
+                                    <div style={{ backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', height: '116px', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                             <div style={{ fontSize: '9px', color: '#6b7280', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', lineHeight: 1, fontFamily: F_SANS }}>现场见证人</div>
                                             <div style={{ fontSize: '18px', color: '#fff', fontWeight: 700, letterSpacing: '0.1em', fontFamily: F_SERIF, marginBottom: '6px', lineHeight: 1 }}>@{displayUserName}</div>
+                                            {/* 替换 Emoji 为纯 ASCII 字符 */}
                                             <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: F_SANS }}>
-                                                📍 坐标：{location}
+                                                [ 坐标 ] {location}
                                             </span>
                                         </div>
-                                        <CircularSeal colorClass={template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} moodText={stampMood} fanNo={fanNo} />
+                                        <div style={{ alignSelf: 'center', flexShrink: 0 }}>
+                                            <CircularSeal colorClass={template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} moodText={stampMood} fanNo={fanNo} />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -173,18 +180,18 @@
                                             <div style={{ width: '8px', height: '8px', backgroundColor: '#E60012', borderRadius: '50%', boxShadow: '0 0 8px rgba(230,0,18,0.8)' }}></div>
                                             <div style={{ fontSize: '10px', color: '#fff', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: F_SANS }}>夺冠之路</div>
                                         </div>
-                                        <div style={{ fontSize: '14px', color: '#f87171', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: F_SERIF }}>{eventInfo}</div>
+                                        <div style={{ fontSize: '14px', color: '#f87171', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '6px', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: 1 }}>{eventInfo}</div>
                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
                                             <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: F_SERIF }}>{athlete}</h2>
                                             <span style={{ fontSize: '24px', color: '#fff', backgroundColor: '#E60012', padding: '4px 8px', transform: 'skewX(-12deg)', fontWeight: 900, display: 'inline-block', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', margin: 0, lineHeight: 1, fontFamily: F_SANS }}>{score}</span>
                                         </div>
                                     </div>
                                     <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderLeft: '4px solid #E60012', padding: '12px', marginBottom: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                        <p style={{ fontSize: '13px', color: '#fff', fontWeight: 900, margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: F_SERIF }}>“{quote}”</p>
+                                        <p style={{ fontSize: '13px', color: '#fff', fontWeight: 900, margin: 0, wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF }}>“{quote}”</p>
                                     </div>
                                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#e5e7eb', fontFamily: F_SANS }}>
                                         <div>祈福粉丝: @{displayUserName}</div>
-                                        <div>📍 {location}</div>
+                                        <div>[ 坐标 ] {location}</div>
                                     </div>
                                 </div>
                             </div>
@@ -203,10 +210,12 @@
                                         <div style={{ fontSize: '10px', fontStyle: 'italic', fontFamily: F_SANS }}>热爱印记</div>
                                     </div>
                                     <div style={{ flexGrow: 1, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <div style={{ fontSize: '14px', color: '#E60012', fontWeight: 900, marginBottom: '8px', fontFamily: F_SERIF }}>{eventInfo}</div>
-                                        <h2 style={{ fontSize: '36px', color: '#fff', fontWeight: 900, marginBottom: '4px', whiteSpace: 'nowrap', fontFamily: F_SERIF }}>{athlete}</h2>
-                                        <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.8)', fontWeight: 900, fontStyle: 'italic', fontFamily: F_SANS }}>{score}</div>
-                                        <p style={{ fontSize: '13px', color: '#d1d5db', marginTop: '20px', margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, letterSpacing: '0.05em' }}>"{quote}"</p>
+                                        <div style={{ fontSize: '14px', color: '#E60012', fontWeight: 900, marginBottom: '8px', fontFamily: F_SERIF, lineHeight: 1 }}>{eventInfo}</div>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '4px' }}>
+                                            <h2 style={{ fontSize: '36px', color: '#fff', fontWeight: 900, margin: 0, whiteSpace: 'nowrap', fontFamily: F_SERIF, lineHeight: 1 }}>{athlete}</h2>
+                                            <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.8)', fontWeight: 900, fontStyle: 'italic', fontFamily: F_SANS, margin: 0, lineHeight: 1 }}>{score}</div>
+                                        </div>
+                                        <p style={{ fontSize: '13px', color: '#d1d5db', marginTop: '20px', margin: 0, wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, letterSpacing: '0.05em' }}>"{quote}"</p>
                                     </div>
                                     <div style={{ backgroundColor: '#fff', color: '#000', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -216,7 +225,7 @@
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
                                                 <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#E60012', marginBottom: '2px', fontFamily: F_SANS }}>观赛坐标</div>
-                                                <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: F_SANS }}>{location}</div>
+                                                <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: F_SANS }}>[ 坐标 ] {location}</div>
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '4px', opacity: 0.6, height: '24px' }}>
@@ -233,14 +242,18 @@
                         <div className="absolute inset-0 z-20" style={{ backgroundColor: '#f5f5dc', display: 'flex', flexDirection: 'column', padding: '24px', boxSizing: 'border-box' }}>
                             <div style={{ flexGrow: 1, backgroundColor: '#000', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)' }}>{renderBackground('filter-polaroid')}</div>
                             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingTop: '24px', flexShrink: 0 }}>
-                                <div style={{ color: '#333', fontSize: '13px', fontWeight: 900, lineHeight: 1.6, letterSpacing: '0.05em', fontFamily: F_SERIF }}>
-                                    {eventInfo}，{athlete}{score}。<br/>
-                                    <span style={{ color: '#666', fontWeight: 400, fontStyle: 'italic', fontFamily: F_SERIF }}>"{quote}"</span>
+                                <div style={{ color: '#333', fontSize: '13px', fontWeight: 900, lineHeight: 1.6, letterSpacing: '0.05em', fontFamily: F_SERIF, wordBreak: 'break-all' }}>
+                                    <div style={{ marginBottom: '6px', lineHeight: 1 }}>{eventInfo}</div>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '6px' }}>
+                                        <span style={{ fontSize: '16px', lineHeight: 1 }}>{athlete}</span>
+                                        <span style={{ fontSize: '14px', lineHeight: 1 }}>{score}</span>
+                                    </div>
+                                    <span style={{ color: '#666', fontWeight: 400, fontStyle: 'italic', fontFamily: F_SERIF, display: 'block', marginTop: '4px' }}>"{quote}"</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #ccc', paddingTop: '12px', marginTop: '12px' }}>
                                     <div>
                                         <div style={{ color: '#888', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: F_SANS }}>记忆坐标</div>
-                                        <div style={{ color: '#333', fontSize: '12px', fontWeight: 900, marginTop: '2px', fontFamily: F_SANS }}>📍 {location}</div>
+                                        <div style={{ color: '#333', fontSize: '12px', fontWeight: 900, marginTop: '2px', fontFamily: F_SANS }}>[ 坐标 ] {location}</div>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         <div style={{ color: '#888', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: F_SANS }}>专属见证</div>
@@ -399,8 +412,6 @@
                 if (!printRef.current) return;
                 setIsGenerating(true);
                 try {
-                    // 安全容错防御机制：利用 Promise.race 给字体检测加 1秒超时
-                    // 防止弱网或部分安卓浏览器因为 fonts API 没响应而永久卡死/黑屏
                     try {
                         if (document && document.fonts && document.fonts.ready) {
                             await Promise.race([
@@ -420,7 +431,6 @@
                         height: POSTER_HEIGHT,
                         windowWidth: POSTER_WIDTH,
                         windowHeight: POSTER_HEIGHT
-                        // 坚决不可在此处写 onclone 访问 clonedDoc.fonts，彻底杜绝沙盒报错崩溃！
                     });
                     
                     const imgData = canvas.toDataURL('image/jpeg', 0.9);
@@ -428,7 +438,6 @@
 
                 } catch (error) { 
                     console.error(error); 
-                    // 暴露出真实错误信息，不再一头雾水
                     alert('海报生成失败：\n' + (error.message || error.toString() || '未知渲染错误，请刷新重试'));
                 } finally { 
                     setIsGenerating(false); 
@@ -466,7 +475,7 @@
                             </div>
                         </div>
 
-                        {/* 2. 真正的截图源：定位到屏幕外 (-9999px)，保证 DOM 100% 完整渲染，彻底根除透明度被跳过或底切的Bug！ */}
+                        {/* 2. 真正的截图源：定位到屏幕外 (-9999px)，保证 DOM 100% 完整渲染 */}
                         <div className="fixed z-[-100] pointer-events-none" style={{ top: 0, left: '-9999px' }} aria-hidden="true">
                             <Poster ref={printRef} {...posterProps} />
                         </div>
