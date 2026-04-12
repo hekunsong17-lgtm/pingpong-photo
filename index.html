@@ -187,7 +187,6 @@
             const [fanNo, setFanNo] = useState('');
             const [isGenerating, setIsGenerating] = useState(false);
             
-            // --- 核心：保存生成的最终高清图片 Base64 ---
             const [resultImage, setResultImage] = useState(null);
             
             const containerRef = useRef(null);
@@ -196,7 +195,6 @@
 
             const displayUserName = userName || '你的名字';
 
-            // 监听窗口大小以调整前台预览缩放
             useEffect(() => {
                 const updateScale = () => {
                     if (containerRef.current) {
@@ -235,17 +233,21 @@
                 if (!printRef.current) return;
                 setIsGenerating(true);
                 try {
+                    // 防断切、防错乱的核心截取引擎配置
                     const canvas = await html2canvas(printRef.current, { 
                         scale: 2, 
                         useCORS: true, 
                         backgroundColor: '#050505',
-                        windowWidth: POSTER_WIDTH
+                        width: POSTER_WIDTH,         // 强制指定物理宽度，绝不让浏览器瞎猜
+                        height: POSTER_HEIGHT,       // 强制指定物理高度
+                        windowWidth: POSTER_WIDTH,
+                        windowHeight: POSTER_HEIGHT
                     });
                     
-                    // 获取高清图片数据
-                    const imgData = canvas.toDataURL('image/png');
+                    // 绝杀2：使用 image/jpeg 导出，压缩率为 0.9。
+                    // 相比 png 的 Base64 体积缩小 70%，彻底解决微信/安卓无法读取大图变成 0B 的 Bug！
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9);
                     
-                    // 彻底废弃 link.download 机制，改为弹出全屏预览模式（绕过安卓微信下载限制）
                     setResultImage(imgData);
 
                 } catch (error) { 
@@ -261,44 +263,40 @@
                 return <div className={`w-full h-full absolute inset-0 z-0 bg-[#111111] flex items-center justify-center ${filterClass}`}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
             };
 
-            // 【核心重构】：所有元素被放入单独的生成器画板中，彻底去除高度死锁和错位空格
+            // 绝杀1：海报内部彻底剥离所有不可靠的 Tailwind 动态尺寸计算！
+            // 每一个会影响布局宽高的尺寸，全部写死成了标准的内联 CSS (`style={{...}}`)，钢筋混凝土级的稳固。
             const posterContent = (
-                <div className="w-[420px] h-[560px] relative overflow-hidden bg-black isolate" style={{ WebkitTextSizeAdjust: '100%', textSizeAdjust: '100%' }}>
+                <div className="relative overflow-hidden bg-black isolate" style={{ width: '420px', height: '560px', WebkitTextSizeAdjust: '100%', textSizeAdjust: '100%' }}>
                     <div className="absolute inset-0 noise-bg z-[5]"></div>
                     
                     {(template === 'honor' || template === 'birthday') && (
                         <>
                             {renderBackground(template === 'birthday' ? 'filter-birthday' : 'filter-honor')}
-                            <div className={`absolute inset-0 z-10 ${template === 'birthday' ? 'bg-gradient-to-t from-black via-transparent to-pink-500/10' : 'bg-gradient-to-t from-black via-black/40 to-transparent'}`}></div>
+                            <div className="absolute inset-0 z-10" style={{ background: template === 'birthday' ? 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(255,183,197,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
                             
                             <div className="absolute top-6 right-6 z-20 flex flex-col items-end antialiased">
-                                <div className="text-[10px] font-bold tracking-widest uppercase mb-0.5 font-sans text-gray-200">{template === 'birthday' ? '生日限定' : '专属生成'}</div>
-                                <div className={`text-[12px] font-black tracking-[0.2em] italic font-sans ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`}>热爱印记</div>
+                                <div className="font-bold tracking-widest uppercase mb-0.5 font-sans text-gray-200" style={{ fontSize: '10px' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
+                                <div className={`font-black tracking-[0.2em] italic font-sans ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`} style={{ fontSize: '12px' }}>热爱印记</div>
                             </div>
 
-                            {/* 统一使用 bottom-6 Flex 堆叠流，用 mb-4 推开 */}
                             <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col justify-end">
-                                
-                                {/* 上半部分：文字信息 */}
                                 <div className="flex flex-col mb-4">
-                                    <div className="text-white font-serif-sc text-sm font-black tracking-wider drop-shadow-md mb-1">{eventInfo}</div>
+                                    <div className="text-white font-serif-sc font-black tracking-wider drop-shadow-md mb-1" style={{ fontSize: '14px' }}>{eventInfo}</div>
                                     <div className="flex items-end gap-3 mb-3 whitespace-nowrap">
-                                        <h2 className="text-[44px] font-serif-sc font-black text-white leading-none tracking-widest drop-shadow-lg">{athlete}</h2>
-                                        <span className={`text-3xl font-sans font-black italic leading-none drop-shadow-lg ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`}>{score}</span>
+                                        <h2 className="font-serif-sc font-black text-white leading-none tracking-widest drop-shadow-lg shrink-0" style={{ fontSize: '44px' }}>{athlete}</h2>
+                                        <span className={`font-sans font-black italic leading-none drop-shadow-lg shrink-0 ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`} style={{ fontSize: '30px' }}>{score}</span>
                                     </div>
-                                    {/* 修复：去除了 {quote} 两侧的空格，标点完美贴合，不会出现悬空和截断 */}
-                                    <p className={`text-[13px] font-serif-sc tracking-wide leading-relaxed border-l-2 pl-3 pr-2 drop-shadow-md m-0 ${template === 'birthday' ? 'text-pink-100 border-brand-pink' : 'text-gray-300 border-brand-gold'}`} style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                                    <p className={`font-serif-sc tracking-wide leading-relaxed border-l-2 pl-3 pr-2 drop-shadow-md m-0 ${template === 'birthday' ? 'text-pink-100 border-brand-pink' : 'text-gray-300 border-brand-gold'}`} style={{ fontSize: '13px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
                                         “{quote}”
                                     </p>
                                 </div>
 
-                                {/* 下半部分：黑框信息 (改为 min-h 自适应高度，彻底告别底部被切) */}
-                                <div className="bg-black/70 backdrop-blur-xl border border-white/10 rounded-lg p-4 min-h-[110px] shrink-0 w-full relative z-20">
+                                <div className="bg-black/70 backdrop-blur-xl border border-white/10 rounded-lg p-4 shrink-0 w-full relative z-20" style={{ minHeight: '110px' }}>
                                     <div className="flex justify-between items-end h-full relative z-10">
                                         <div className="flex flex-col justify-end pb-1">
-                                            <div className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1.5 leading-none font-sans">现场见证人</div>
-                                            <div className="text-white font-bold text-lg tracking-widest font-serif-sc leading-none mb-1.5">@{displayUserName}</div>
-                                            <span className={`text-[10px] font-bold tracking-widest whitespace-nowrap ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} font-sans`}>
+                                            <div className="text-gray-500 font-bold tracking-widest uppercase mb-1.5 leading-none font-sans" style={{ fontSize: '9px' }}>现场见证人</div>
+                                            <div className="text-white font-bold tracking-widest font-serif-sc leading-none mb-1.5" style={{ fontSize: '18px' }}>@{displayUserName}</div>
+                                            <span className={`font-bold tracking-widest whitespace-nowrap font-sans ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`} style={{ fontSize: '10px' }}>
                                                 📍 坐标：{location}
                                             </span>
                                         </div>
@@ -313,28 +311,28 @@
                         <>
                             {renderBackground('filter-cheer')}
                             <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-black/40 to-transparent z-10"></div>
-                            <div className="absolute top-8 left-6 z-20"><div className="text-brand-red font-black text-[72px] italic opacity-20 transform -rotate-6 font-serif-sc">战</div></div>
+                            <div className="absolute top-8 left-6 z-20"><div className="text-brand-red font-black italic opacity-20 transform -rotate-6 font-serif-sc" style={{ fontSize: '72px' }}>战</div></div>
                             <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
-                                <div className="text-[10px] font-bold uppercase mb-0.5 font-sans">出征祈福</div>
-                                <div className="text-[12px] font-black italic text-brand-red font-sans">热爱印记</div>
+                                <div className="font-bold uppercase mb-0.5 font-sans text-white" style={{ fontSize: '10px' }}>出征祈福</div>
+                                <div className="font-black italic text-brand-red font-sans" style={{ fontSize: '12px' }}>热爱印记</div>
                             </div>
                             
                             <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col justify-end">
                                 <div className="flex flex-col mb-4">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-2 h-2 bg-brand-red rounded-full animate-pulse shadow-[0_0_8px_rgba(230,0,18,0.8)]"></div>
-                                        <div className="text-white text-[10px] font-black tracking-[0.3em] uppercase font-sans drop-shadow-md">夺冠之路</div>
+                                        <div className="bg-brand-red rounded-full animate-pulse shadow-[0_0_8px_rgba(230,0,18,0.8)]" style={{ width: '8px', height: '8px' }}></div>
+                                        <div className="text-white font-black tracking-[0.3em] uppercase font-sans drop-shadow-md" style={{ fontSize: '10px' }}>夺冠之路</div>
                                     </div>
-                                    <div className="text-red-400 font-bold text-sm tracking-widest mb-1 font-serif-sc drop-shadow-md">{eventInfo}</div>
+                                    <div className="text-red-400 font-bold tracking-widest mb-1 font-serif-sc drop-shadow-md" style={{ fontSize: '14px' }}>{eventInfo}</div>
                                     <div className="flex items-end gap-3 whitespace-nowrap">
-                                        <h2 className="text-[44px] font-black text-white tracking-widest drop-shadow-lg font-serif-sc">{athlete}</h2>
-                                        <span className="text-2xl font-black text-white bg-brand-red px-2 py-1 transform -skew-x-12 font-sans shadow-lg">{score}</span>
+                                        <h2 className="font-black text-white tracking-widest drop-shadow-lg font-serif-sc shrink-0" style={{ fontSize: '44px' }}>{athlete}</h2>
+                                        <span className="font-black text-white bg-brand-red px-2 py-1 transform -skew-x-12 font-sans shadow-lg shrink-0" style={{ fontSize: '24px' }}>{score}</span>
                                     </div>
                                 </div>
                                 <div className="bg-white/10 border-l-4 border-brand-red p-3 shrink-0 shadow-lg mb-4">
-                                    <p className="text-white text-[13px] font-bold font-serif-sc m-0" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>“{quote}”</p>
+                                    <p className="text-white font-bold font-serif-sc m-0" style={{ fontSize: '13px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>“{quote}”</p>
                                 </div>
-                                <div className="flex justify-between items-center border-t border-white/20 pt-3 text-[10px] font-sans min-h-[30px] shrink-0">
+                                <div className="flex justify-between items-center border-t border-white/20 pt-3 font-sans text-gray-200 shrink-0" style={{ fontSize: '10px', minHeight: '30px' }}>
                                     <div>祈福粉丝: @{displayUserName}</div>
                                     <div>📍 {location}</div>
                                 </div>
@@ -347,21 +345,31 @@
                             {renderBackground('filter-ticket')}
                             <div className="absolute inset-0 bg-black/60 z-10"></div>
                             <div className="absolute inset-4 border-[3px] border-white/80 z-20 flex flex-col">
-                                <div className="h-10 bg-brand-red text-white flex justify-between items-center px-4 shrink-0"><div className="text-xs font-black font-sans">专属入场券</div><div className="text-[10px] italic font-sans">热爱印记</div></div>
-                                <div className="p-5 flex-1 flex flex-col justify-center">
-                                    <div className="text-brand-red font-bold text-sm mb-2 font-serif-sc">{eventInfo}</div>
-                                    <h2 className="text-white text-4xl font-black mb-1 font-serif-sc whitespace-nowrap">{athlete}</h2>
-                                    <div className="text-white/80 text-xl font-black italic font-sans">{score}</div>
-                                    <p className="text-gray-300 text-[13px] mt-5 font-serif-sc tracking-wide m-0" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>"{quote}"</p>
+                                <div className="bg-brand-red text-white flex justify-between items-center px-4 shrink-0" style={{ height: '40px' }}>
+                                    <div className="font-black font-sans" style={{ fontSize: '12px' }}>专属入场券</div>
+                                    <div className="italic font-sans" style={{ fontSize: '10px' }}>热爱印记</div>
                                 </div>
-                                {/* 修改固定高度为 min-h 自适应 */}
-                                <div className="bg-white text-black p-4 shrink-0 flex flex-col gap-3 font-sans min-h-[100px]">
+                                <div className="p-5 flex-1 flex flex-col justify-center">
+                                    <div className="text-brand-red font-bold mb-2 font-serif-sc" style={{ fontSize: '14px' }}>{eventInfo}</div>
+                                    <h2 className="text-white font-black mb-1 font-serif-sc whitespace-nowrap" style={{ fontSize: '36px' }}>{athlete}</h2>
+                                    <div className="text-white/80 font-black italic font-sans" style={{ fontSize: '20px' }}>{score}</div>
+                                    <p className="text-gray-300 mt-5 font-serif-sc tracking-wide m-0" style={{ fontSize: '13px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>"{quote}"</p>
+                                </div>
+                                <div className="bg-white text-black p-4 shrink-0 flex flex-col gap-3 font-sans" style={{ minHeight: '100px' }}>
                                     <div className="flex justify-between items-end">
-                                        <div><div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">专属 ID</div><div className="font-black text-sm uppercase font-serif-sc">@{displayUserName}</div></div>
-                                        <div className="text-right"><div className="text-[10px] font-bold uppercase tracking-widest text-brand-red mb-0.5">观赛坐标</div><div className="font-bold text-xs">{location}</div></div>
+                                        <div>
+                                            <div className="font-bold uppercase tracking-widest text-gray-500" style={{ fontSize: '10px' }}>专属 ID</div>
+                                            <div className="font-black uppercase font-serif-sc" style={{ fontSize: '14px' }}>@{displayUserName}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-bold uppercase tracking-widest text-brand-red mb-0.5" style={{ fontSize: '10px' }}>观赛坐标</div>
+                                            <div className="font-bold text-black" style={{ fontSize: '12px' }}>{location}</div>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-1 h-6 opacity-60">{[...Array(32)].map((_, i) => (<div key={i} className={`h-full bg-black ${Math.random() > 0.5 ? 'w-1' : 'w-[2px]'}`}></div>))}</div>
-                                    <div className="text-center text-xs font-black font-sans tracking-[0.4em]">NO.{fanNo}</div>
+                                    <div className="flex gap-1 opacity-60" style={{ height: '24px' }}>
+                                        {[...Array(32)].map((_, i) => (<div key={i} className="bg-black" style={{ width: Math.random() > 0.5 ? '1px' : '2px', height: '100%' }}></div>))}
+                                    </div>
+                                    <div className="text-center font-black font-sans tracking-[0.4em]" style={{ fontSize: '12px' }}>NO.{fanNo}</div>
                                 </div>
                             </div>
                         </>
@@ -371,12 +379,17 @@
                         <>
                             <div className="absolute inset-0 bg-[#f5f5dc] z-0 flex flex-col p-6">
                                 <div className="flex-1 bg-black relative overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] z-10">{renderBackground('filter-polaroid')}</div>
-                                {/* 释放固定高度限制 */}
-                                <div className="min-h-[120px] shrink-0 flex flex-col justify-end pt-6 z-20">
-                                    <div className="text-[#333] font-serif-sc text-[13px] leading-relaxed font-bold tracking-wide">{eventInfo}，{athlete}{score}。<br/><span className="text-[#666] font-normal italic">"{quote}"</span></div>
+                                <div className="shrink-0 flex flex-col justify-end pt-6 z-20" style={{ minHeight: '120px' }}>
+                                    <div className="text-[#333] font-serif-sc leading-relaxed font-bold tracking-wide" style={{ fontSize: '13px' }}>{eventInfo}，{athlete}{score}。<br/><span className="text-[#666] font-normal italic">"{quote}"</span></div>
                                     <div className="flex justify-between items-end border-t border-[#ccc] pt-3 mt-3 font-sans">
-                                        <div><div className="text-[#888] text-[10px] tracking-widest uppercase">记忆坐标</div><div className="text-[#333] font-bold text-xs mt-0.5" style={{fontFamily: 'cursive'}}>📍 {location}</div></div>
-                                        <div className="text-right"><div className="text-[#888] text-[10px] tracking-widest uppercase">专属见证</div><div className="text-[#d93a3a] font-bold text-base mt-0.5 font-serif-sc">@{displayUserName}</div></div>
+                                        <div>
+                                            <div className="text-[#888] tracking-widest uppercase" style={{ fontSize: '10px' }}>记忆坐标</div>
+                                            <div className="text-[#333] font-bold mt-0.5" style={{ fontSize: '12px', fontFamily: 'cursive' }}>📍 {location}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-[#888] tracking-widest uppercase" style={{ fontSize: '10px' }}>专属见证</div>
+                                            <div className="text-[#d93a3a] font-bold mt-0.5 font-serif-sc" style={{ fontSize: '16px' }}>@{displayUserName}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -397,15 +410,15 @@
 
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
                         
-                        {/* 前台预览框：负责根据手机屏幕缩放看效果 */}
+                        {/* 前台预览框：仅负责展示，缩放随屏幕自适应 */}
                         <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center z-10" style={{ height: `${POSTER_HEIGHT * scale}px` }}>
                             <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0, width: `${POSTER_WIDTH}px`, height: `${POSTER_HEIGHT}px` }}>
                                 {posterContent}
                             </div>
                         </div>
 
-                        {/* 隐身绝杀画板：放在绝对定位的最底层，被外层的 bg-black 遮盖，安全又完美，不影响引擎截图 */}
-                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-[-1]" aria-hidden="true">
+                        {/* 真正的截图源：物理上完全隔离。放在左上角(top-0)防止被系统裁切，同时透明度设为极低确保用户看不见，但引擎可以截到最原生的样式！ */}
+                        <div className="absolute top-0 left-0 z-[-100] pointer-events-none" style={{ opacity: 0.01 }} aria-hidden="true">
                             <div ref={printRef}>
                                 {posterContent}
                             </div>
@@ -501,23 +514,27 @@
                             {isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 保存我的海报</>}
                         </button>
                         <div className="text-center font-sans">
-                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">关注公众号：热爱印记，获取更多专属应援模板</p>
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">长按图片可保存分享至朋友圈/小红书</p>
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest mt-1">关注公众号：热爱印记，获取更多专属应援模板</p>
                         </div>
                     </div>
 
-                    {/* --- 终极保存方案：防封杀弹窗全屏预览，长按保存 --- */}
+                    {/* 高清防拦截最终展示层 - 强制用户交互保护 */}
                     {resultImage && (
                         <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in">
                             <div className="w-full max-w-sm flex flex-col items-center">
-                                {/* 高清海报展示区，用户长按这里保存 */}
-                                <img src={resultImage} alt="专属海报" className="w-full rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] mb-6" style={{ pointerEvents: 'auto' }} />
+                                {/* 专属 CSS：WebkitTouchCallout 确保 iOS 长按必定触发保存菜单 */}
+                                <img 
+                                    src={resultImage} 
+                                    alt="专属海报" 
+                                    className="w-full rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] mb-6" 
+                                    style={{ pointerEvents: 'auto', WebkitTouchCallout: 'default', userSelect: 'auto', WebkitUserSelect: 'auto', display: 'block' }} 
+                                />
                                 
-                                {/* 引导动画 */}
                                 <div className="bg-brand-red text-white px-6 py-3 rounded-full font-bold text-sm mb-5 animate-bounce shadow-lg flex items-center gap-2">
                                     <Icon name="download" className="w-4 h-4" /> 👇 请长按上方海报保存到相册
                                 </div>
                                 
-                                {/* 关闭按钮 */}
                                 <button onClick={() => setResultImage(null)} className="text-gray-400 text-sm border-b border-gray-600 pb-1 hover:text-white transition-colors">
                                     返回继续修改
                                 </button>
