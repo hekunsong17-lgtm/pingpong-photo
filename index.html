@@ -226,7 +226,7 @@
                 if (!printRef.current) return;
                 setIsGenerating(true);
                 try {
-                    // HTML2Canvas 截图隐藏的绝对 420x560 画板，不带任何缩放！
+                    // HTML2Canvas 截图，此时画板位于 top-0 且完全透明，彻底杜绝被系统错误裁切
                     const canvas = await html2canvas(printRef.current, { 
                         scale: 2, 
                         useCORS: true, 
@@ -250,7 +250,7 @@
                 return <div className={`w-full h-full absolute inset-0 z-0 bg-[#111111] flex items-center justify-center ${filterClass}`}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
             };
 
-            // 【核心重构】：所有元素被放入单独的生成器画板中
+            // 【核心重构】：所有元素被放入单独的生成器画板中，彻底去除高度死锁和错位空格
             const posterContent = (
                 <div className="w-[420px] h-[560px] relative overflow-hidden bg-black isolate" style={{ WebkitTextSizeAdjust: '100%', textSizeAdjust: '100%' }}>
                     <div className="absolute inset-0 noise-bg z-[5]"></div>
@@ -265,23 +265,24 @@
                                 <div className={`text-[12px] font-black tracking-[0.2em] italic font-sans ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`}>热爱印记</div>
                             </div>
 
-                            {/* 🚨 终极防御：统一使用 bottom-6 Flex 堆叠流，用 mb-4 推开，物理断绝重叠可能 🚨 */}
+                            {/* 统一使用 bottom-6 Flex 堆叠流，用 mb-4 推开 */}
                             <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col justify-end">
                                 
-                                {/* 上半部分：文字信息 (mb-4 绝对挤不开) */}
+                                {/* 上半部分：文字信息 */}
                                 <div className="flex flex-col mb-4">
                                     <div className="text-white font-serif-sc text-sm font-black tracking-wider drop-shadow-md mb-1">{eventInfo}</div>
                                     <div className="flex items-end gap-3 mb-3 whitespace-nowrap">
                                         <h2 className="text-[44px] font-serif-sc font-black text-white leading-none tracking-widest drop-shadow-lg">{athlete}</h2>
                                         <span className={`text-3xl font-sans font-black italic leading-none drop-shadow-lg ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`}>{score}</span>
                                     </div>
+                                    {/* 修复：去除了 {quote} 两侧的空格，标点完美贴合，不会出现悬空和截断 */}
                                     <p className={`text-[13px] font-serif-sc tracking-wide leading-relaxed border-l-2 pl-3 pr-2 drop-shadow-md m-0 ${template === 'birthday' ? 'text-pink-100 border-brand-pink' : 'text-gray-300 border-brand-gold'}`} style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-                                        “ {quote} ”
+                                        “{quote}”
                                     </p>
                                 </div>
 
-                                {/* 下半部分：黑框信息 (固定高度，强制撑开底部) */}
-                                <div className="bg-black/70 backdrop-blur-xl border border-white/10 rounded-lg p-4 h-[116px] shrink-0 w-full relative overflow-hidden">
+                                {/* 下半部分：黑框信息 (改为 min-h 自适应高度，彻底告别底部被切) */}
+                                <div className="bg-black/70 backdrop-blur-xl border border-white/10 rounded-lg p-4 min-h-[110px] shrink-0 w-full relative z-20">
                                     <div className="flex justify-between items-end h-full relative z-10">
                                         <div className="flex flex-col justify-end pb-1">
                                             <div className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1.5 leading-none font-sans">现场见证人</div>
@@ -307,7 +308,6 @@
                                 <div className="text-[12px] font-black italic text-brand-red font-sans">热爱印记</div>
                             </div>
                             
-                            {/* 同样使用 Flex 堆叠流，彻底隔离 */}
                             <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col justify-end">
                                 <div className="flex flex-col mb-4">
                                     <div className="flex items-center gap-2 mb-2">
@@ -321,9 +321,9 @@
                                     </div>
                                 </div>
                                 <div className="bg-white/10 border-l-4 border-brand-red p-3 shrink-0 shadow-lg mb-4">
-                                    <p className="text-white text-[13px] font-bold font-serif-sc m-0" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>“ {quote} ”</p>
+                                    <p className="text-white text-[13px] font-bold font-serif-sc m-0" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>“{quote}”</p>
                                 </div>
-                                <div className="flex justify-between items-center border-t border-white/20 pt-3 text-[10px] font-sans h-[30px] shrink-0">
+                                <div className="flex justify-between items-center border-t border-white/20 pt-3 text-[10px] font-sans min-h-[30px] shrink-0">
                                     <div>祈福粉丝: @{displayUserName}</div>
                                     <div>📍 {location}</div>
                                 </div>
@@ -341,13 +341,15 @@
                                     <div className="text-brand-red font-bold text-sm mb-2 font-serif-sc">{eventInfo}</div>
                                     <h2 className="text-white text-4xl font-black mb-1 font-serif-sc whitespace-nowrap">{athlete}</h2>
                                     <div className="text-white/80 text-xl font-black italic font-sans">{score}</div>
-                                    <p className="text-gray-300 text-[13px] mt-5 font-serif-sc tracking-wide m-0" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>" {quote} "</p>
+                                    <p className="text-gray-300 text-[13px] mt-5 font-serif-sc tracking-wide m-0" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>"{quote}"</p>
                                 </div>
-                                <div className="bg-white text-black p-4 shrink-0 flex flex-col gap-3 font-sans h-[100px]">
+                                {/* 修改固定高度为 min-h 自适应 */}
+                                <div className="bg-white text-black p-4 shrink-0 flex flex-col gap-3 font-sans min-h-[100px]">
                                     <div className="flex justify-between items-end">
                                         <div><div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">专属 ID</div><div className="font-black text-sm uppercase font-serif-sc">@{displayUserName}</div></div>
                                         <div className="text-right"><div className="text-[10px] font-bold uppercase tracking-widest text-brand-red mb-0.5">观赛坐标</div><div className="font-bold text-xs">{location}</div></div>
                                     </div>
+                                    <div className="flex gap-1 h-6 opacity-60">{[...Array(32)].map((_, i) => (<div key={i} className={`h-full bg-black ${Math.random() > 0.5 ? 'w-1' : 'w-[2px]'}`}></div>))}</div>
                                     <div className="text-center text-xs font-black font-sans tracking-[0.4em]">NO.{fanNo}</div>
                                 </div>
                             </div>
@@ -358,7 +360,8 @@
                         <>
                             <div className="absolute inset-0 bg-[#f5f5dc] z-0 flex flex-col p-6">
                                 <div className="flex-1 bg-black relative overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] z-10">{renderBackground('filter-polaroid')}</div>
-                                <div className="h-[120px] shrink-0 flex flex-col justify-end pt-6 z-20">
+                                {/* 释放固定高度限制 */}
+                                <div className="min-h-[120px] shrink-0 flex flex-col justify-end pt-6 z-20">
                                     <div className="text-[#333] font-serif-sc text-[13px] leading-relaxed font-bold tracking-wide">{eventInfo}，{athlete}{score}。<br/><span className="text-[#666] font-normal italic">"{quote}"</span></div>
                                     <div className="flex justify-between items-end border-t border-[#ccc] pt-3 mt-3 font-sans">
                                         <div><div className="text-[#888] text-[10px] tracking-widest uppercase">记忆坐标</div><div className="text-[#333] font-bold text-xs mt-0.5" style={{fontFamily: 'cursive'}}>📍 {location}</div></div>
@@ -372,7 +375,7 @@
             );
 
             return (
-                <div className="min-h-screen flex flex-col items-center pb-12 font-sans bg-black">
+                <div className="min-h-screen flex flex-col items-center pb-12 font-sans bg-black relative">
                     <div className="w-full max-w-md p-5 pb-2 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded bg-brand-red flex items-center justify-center"><Icon name="award" className="w-4 h-4 text-white" /></div>
@@ -381,7 +384,7 @@
                         <div className="text-[10px] text-gray-500 font-bold border border-gray-800 px-2 py-1 rounded">获取更多应援模板</div>
                     </div>
 
-                    <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2">
+                    <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
                         
                         {/* 前台预览框：负责根据手机屏幕缩放看效果 */}
                         <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center" style={{ height: `${POSTER_HEIGHT * scale}px` }}>
@@ -390,8 +393,8 @@
                             </div>
                         </div>
 
-                        {/* 隐身绝杀画板：藏在屏幕外围，死死保持 420x560 原比例，专供引擎截图 */}
-                        <div className="fixed top-[-9999px] left-[-9999px] z-[-100]" aria-hidden="true">
+                        {/* 隐身绝杀画板：挪到屏幕绝对左上角(top-0)，保证完全在可视渲染区内，但用 opacity-0 隐身，坚决防止移动端渲染裁切 */}
+                        <div className="absolute top-0 left-0 z-[-100] opacity-0 pointer-events-none" aria-hidden="true">
                             <div ref={printRef}>
                                 {posterContent}
                             </div>
@@ -406,7 +409,7 @@
                             </label>
                         )}
                         {image && (
-                            <label className="fixed top-[90px] right-[25px] z-50 bg-black/50 backdrop-blur-md p-2.5 rounded-full cursor-pointer hover:bg-black text-white transition-colors border border-white/20">
+                            <label className="absolute top-[30px] right-[10px] z-50 bg-black/50 backdrop-blur-md p-2.5 rounded-full cursor-pointer hover:bg-black text-white transition-colors border border-white/20">
                                 <Icon name="refresh-cw" className="w-4 h-4" />
                                 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                             </label>
