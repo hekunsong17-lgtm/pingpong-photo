@@ -56,18 +56,17 @@
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
-        const Icon = ({ name, className = "", style = {} }) => {
+        const Icon = ({ name, className = "" }) => {
             const spanRef = useRef(null);
             useEffect(() => {
                 if (spanRef.current && window.lucide) {
-                    spanRef.current.innerHTML = `<i data-lucide="${name}" class="${className}" style="${Object.entries(style).map(([k,v]) => `${k.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}:${v}`).join(';')}"></i>`;
+                    spanRef.current.innerHTML = `<i data-lucide="${name}" class="${className}"></i>`;
                     window.lucide.createIcons({ root: spanRef.current });
                 }
-            }, [name, className, style]);
-            return <span ref={spanRef} className="contents" style={style}></span>;
+            }, [name, className]);
+            return <span ref={spanRef} className="contents"></span>;
         };
 
-        // --- SVG 矢量公章：解决所有 HTML2Canvas 的渲染 Bug ---
         const CircularSeal = ({ colorClass, moodText, fanNo }) => {
             return (
                 <div className={`opacity-90 ${colorClass}`} style={{ width: '84px', height: '84px', mixBlendMode: 'screen', transform: 'rotate(-6deg)' }}>
@@ -99,9 +98,13 @@
             "让二追三，逆风翻盘，这就是竞技体育的魅力！",
             "千磨万击还坚劲，任尔东西南北风。",
             "赢了一起狂，输了一起扛。",
+            "那些打不倒你的，终将使你更强大。",
             "场上是对手，场下是朋友，这才是真正的体育精神。",
+            "看你打球，就像在看一场惊心动魄的艺术展。",
             "请继续在你的热爱里闪闪发光吧！",
+            "少年负壮气，奋烈自有时。",
             "每一次挥拍都是全力以赴，为你骄傲！",
+            "没有从天而降的冠军，只有百炼成钢的努力。",
             "稳住！你能赢！心跳180也要把比赛看完！"
         ];
 
@@ -110,7 +113,6 @@
         const QUICK_NAMES = ["莎头的兵", "野生战术大师", "气氛组组长", "速效救心丸VIP", "十年老粉", "前排尖叫鸡", "佛系护体散人"];
         const QUICK_STARS = ["孙颖莎", "王楚钦", "樊振东", "马龙", "王曼昱", "林诗栋"];
 
-        // --- 动态语境配置：不同页面对应不同的名称和选项 ---
         const CONTEXT_CONFIG = {
             honor: {
                 eventLabel: 'EVENT / 赛事名称',
@@ -205,6 +207,7 @@
                 else if (template === 'ticket') { setQuote("终于拿到入场券！迫不及待要去现场看你发光了！"); }
                 else if (template === 'cheer') { setQuote("踏平坎坷成大道，祝凯旋！我们在大后方为你加油！"); setStampMood("热血"); }
                 else if (template === 'honor') { setQuote("见证你的时代，是我作为球迷最大的荣幸。"); setStampMood("见证"); }
+                else if (template === 'polaroid') { setQuote("无论巅峰低谷，我在，我们都在。"); }
             }, [template]);
 
             const handleImageUpload = (e) => {
@@ -235,34 +238,29 @@
 
             return (
                 <div className="min-h-screen flex flex-col items-center pb-12 font-sans bg-black">
-                    {/* 头部装饰 */}
                     <div className="w-full max-w-md p-5 pb-2 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded bg-brand-red flex items-center justify-center"><Icon name="award" className="w-4 h-4 text-white" /></div>
-                            <h1 className="text-lg font-black tracking-widest text-white italic uppercase">Match Moment</h1>
+                            <h1 className="text-lg font-black tracking-widest text-white italic uppercase font-sans">Match Moment</h1>
                         </div>
                         <div className="text-[10px] text-gray-500 font-bold border border-gray-800 px-2 py-1 rounded">获取更多应援模板</div>
                     </div>
 
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2">
-                        {/* 预览卡片区域 */}
                         <div className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5" style={{ aspectRatio: '3/4' }}>
                             <div ref={printRef} className="w-full h-full relative overflow-hidden bg-black isolate">
                                 <div className="absolute inset-0 noise-bg z-[5]"></div>
-                                
-                                {/* 荣耀见证 / 生日限定 布局 */}
                                 {(template === 'honor' || template === 'birthday') && (
                                     <>
                                         {renderBackground(template === 'birthday' ? 'filter-birthday' : 'filter-honor')}
                                         <div className={`absolute inset-0 z-10 ${template === 'birthday' ? 'bg-gradient-to-t from-black via-transparent to-pink-500/10' : 'bg-gradient-to-t from-black via-black/40 to-transparent'}`}></div>
-                                        
                                         <div className="absolute top-5 right-5 z-20 flex flex-col items-end antialiased" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
-                                            <div className="text-[10px] font-bold tracking-widest uppercase mb-0.5" style={{ color: '#E0E0E0' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
-                                            <div className={`text-[12px] font-black tracking-[0.2em] italic`} style={{ color: template === 'birthday' ? '#FFB7C5' : '#D4AF37' }}>热爱印记</div>
+                                            <div className="text-[10px] font-bold tracking-widest uppercase mb-0.5 font-sans" style={{ color: '#E0E0E0' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
+                                            <div className={`text-[12px] font-black tracking-[0.2em] italic font-sans`} style={{ color: template === 'birthday' ? '#FFB7C5' : '#D4AF37' }}>热爱印记</div>
                                         </div>
-
                                         <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col">
                                             <div className="mb-0 transform translate-y-1">
+                                                {/* 已移除“官方记录”字样 */}
                                                 <div className="text-white font-serif-sc text-sm font-black tracking-wider">{eventInfo}</div>
                                             </div>
                                             <div className="flex items-end gap-3 mb-4 mt-0.5">
@@ -273,9 +271,9 @@
                                             <div className="bg-black/70 backdrop-blur-xl border border-white/10 rounded-lg p-4 relative overflow-hidden">
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative', zIndex: 10 }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: '4px' }}>
-                                                        <div className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1.5 leading-none">现场见证人</div>
+                                                        <div className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1.5 leading-none font-sans">现场见证人</div>
                                                         <div className="text-white font-bold text-lg tracking-widest font-serif-sc leading-none mb-1.5">@{displayUserName}</div>
-                                                        <span className={`text-[10px] font-bold tracking-widest whitespace-nowrap ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`}>📍 坐标：{location}</span>
+                                                        <span className={`text-[10px] font-bold tracking-widest whitespace-nowrap ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`} style={{ fontFamily: 'system-ui, sans-serif' }}>📍 坐标：{location}</span>
                                                     </div>
                                                     <CircularSeal colorClass={template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} moodText={stampMood} fanNo={fanNo} />
                                                 </div>
@@ -283,58 +281,67 @@
                                         </div>
                                     </>
                                 )}
-
-                                {/* 其他模板逻辑 (出征、票务、日记) */}
                                 {template === 'cheer' && (
                                     <>
                                         {renderBackground('filter-cheer')}
                                         <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-black/40 to-transparent z-10"></div>
+                                        <div className="absolute top-8 left-6 z-20"><div className="text-brand-red font-black text-6xl italic opacity-20 transform -rotate-6 font-serif-sc">战</div></div>
+                                        <div className="absolute top-5 right-5 z-20 flex flex-col items-end antialiased" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
+                                            <div className="text-[10px] font-bold tracking-widest uppercase mb-0.5 font-sans" style={{ color: '#E0E0E0' }}>出征祈福</div>
+                                            <div className={`text-[12px] font-black tracking-[0.2em] italic text-brand-red font-sans`}>热爱印记</div>
+                                        </div>
                                         <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-2 h-2 bg-brand-red rounded-full animate-pulse"></div>
+                                                <div className="text-white text-[10px] font-black tracking-[0.3em] uppercase font-sans">夺冠之路</div>
+                                            </div>
                                             <div className="text-red-400 font-bold text-sm tracking-widest mb-1 font-serif-sc">{eventInfo}</div>
                                             <div className="flex items-end gap-3 mb-4">
                                                 <h2 className="text-5xl font-black text-white italic tracking-widest font-serif-sc drop-shadow-md">{athlete}</h2>
-                                                <span className="text-2xl font-black text-white font-sans bg-brand-red px-2 py-1 transform -skew-x-12">{score}</span>
+                                                <span className="text-2xl font-black text-white font-sans bg-brand-red px-2 py-1 transform -skew-x-12 drop-shadow-md">{score}</span>
                                             </div>
-                                            <div className="bg-white/10 backdrop-blur-md border-l-4 border-brand-red p-3 mb-5"><p className="text-white text-sm font-bold tracking-wide">“ {quote} ”</p></div>
-                                            <div className="flex justify-between items-center border-t border-white/20 pt-3 text-[10px] text-white/70 tracking-widest"><div>祈福粉丝: @{displayUserName}</div><div>📍 {location}</div></div>
+                                            <div className="bg-white/10 backdrop-blur-md border-l-4 border-brand-red p-3 mb-5"><p className="text-white text-sm font-bold tracking-wide font-serif-sc">“ {quote} ”</p></div>
+                                            <div className="flex justify-between items-center border-t border-white/20 pt-3 text-[10px] text-white/70 tracking-widest font-sans"><div>祈福粉丝: @{displayUserName}</div><div>📍 {location}</div></div>
                                         </div>
                                     </>
                                 )}
-
                                 {template === 'ticket' && (
-                                    <div className="absolute inset-4 border-[3px] border-white/80 z-20 flex flex-col justify-between">
-                                        <div className="p-4 bg-brand-red text-white flex justify-between items-center"><div className="text-xs tracking-[0.3em] font-black">专属入场券</div><div className="text-[10px] opacity-80 italic">热爱印记</div></div>
-                                        <div className="p-5">
-                                            <div className="text-brand-red font-bold text-sm mb-2">{eventInfo}</div>
-                                            <h2 className="text-white text-4xl font-black tracking-tighter uppercase mb-1">{athlete}</h2>
-                                            <div className="text-white/80 text-xl font-black italic tracking-widest mb-6">{score}</div>
-                                            <p className="text-gray-300 text-xs italic font-serif-sc">" {quote} "</p>
-                                        </div>
-                                        <div className="bg-white text-black p-4 mt-auto flex flex-col gap-3 font-sans">
-                                            <div className="flex justify-between items-end">
-                                                <div><div className="text-[10px] font-bold uppercase text-gray-500">专属 ID</div><div className="font-black text-sm uppercase">@{displayUserName}</div></div>
-                                                <div className="text-right"><div className="text-[10px] font-bold uppercase text-brand-red mb-0.5">观赛坐标</div><div className="font-bold text-xs">{location}</div></div>
+                                    <>
+                                        {renderBackground('filter-ticket')}
+                                        <div className="absolute inset-0 bg-black/60 z-10"></div>
+                                        <div className="absolute inset-4 border-[3px] border-white/80 z-20 flex flex-col justify-between">
+                                            <div className="p-4 bg-brand-red text-white flex justify-between items-center"><div className="text-xs tracking-[0.3em] font-black font-sans">专属入场券</div><div className="text-[10px] text-white/90 italic font-black antialiased tracking-widest font-sans">热爱印记</div></div>
+                                            <div className="p-5">
+                                                <div className="text-brand-red font-bold text-sm border-l-4 border-brand-red pl-2 mb-2 font-serif-sc">{eventInfo}</div>
+                                                <h2 className="text-white text-4xl font-black tracking-tighter uppercase mb-1 font-serif-sc drop-shadow-md">{athlete}</h2>
+                                                <div className="text-white/80 text-xl font-black italic tracking-widest mb-6 font-sans drop-shadow-md">{score} <Icon name="check-circle" className="w-5 h-5 inline-block text-green-500 mb-1" /></div>
+                                                <p className="text-gray-300 text-xs italic font-serif-sc">" {quote} "</p>
                                             </div>
-                                            <div className="text-center text-xs tracking-[0.4em] font-black">NO.{fanNo}</div>
+                                            <div className="bg-white text-black p-4 mt-auto flex flex-col gap-3 font-sans">
+                                                <div className="flex justify-between items-end">
+                                                    <div><div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">专属 ID</div><div className="font-black text-sm uppercase font-serif-sc">@{displayUserName}</div></div>
+                                                    <div className="text-right"><div className="text-[10px] font-bold uppercase tracking-widest text-brand-red mb-0.5">观赛坐标</div><div className="font-bold text-xs">{location}</div></div>
+                                                </div>
+                                                <div className="flex gap-1 h-6 opacity-60">{[...Array(30)].map((_, i) => (<div key={i} className={`h-full bg-black ${Math.random() > 0.5 ? 'w-1' : 'w-[2px]'}`}></div>))}</div>
+                                                <div className="text-center text-xs tracking-[0.4em] font-black font-sans">NO.{fanNo}</div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    </>
                                 )}
-
                                 {template === 'polaroid' && (
-                                    <div className="absolute inset-0 bg-[#f5f5dc] flex flex-col p-6">
-                                        <div className="flex-1 bg-black relative overflow-hidden">{renderBackground('filter-polaroid')}</div>
-                                        <div className="h-40 flex flex-col justify-between pt-6">
-                                            <div className="text-[#333] font-serif-sc text-sm leading-relaxed font-bold">{eventInfo}，{athlete}{score}。<br/><span className="text-[#666] font-normal italic">"{quote}"</span></div>
+                                    <>
+                                        <div className="absolute inset-0 bg-[#f5f5dc] z-0"></div> 
+                                        <div className="absolute top-6 left-6 right-6 bottom-44 bg-black shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] z-10 overflow-hidden">{renderBackground('filter-polaroid')}</div>
+                                        <div className="absolute bottom-6 left-6 right-6 z-20 h-36 flex flex-col justify-between">
+                                            <div className="text-[#333] font-serif-sc text-sm leading-relaxed font-bold">{eventInfo}，{athlete}{score}。<br/><span className="text-[#666] font-normal">"{quote}"</span></div>
                                             <div className="flex justify-between items-end border-t border-[#ccc] pt-3 font-sans">
-                                                <div><div className="text-[#888] text-[10px] uppercase">记忆坐标</div><div className="text-[#333] font-bold text-xs mt-0.5">📍 {location}</div></div>
-                                                <div className="text-right"><div className="text-[#888] text-[10px] uppercase">专属见证</div><div className="text-[#d93a3a] font-bold text-base mt-0.5">@{displayUserName}</div></div>
+                                                <div><div className="text-[#888] text-[10px] tracking-widest uppercase">打卡坐标</div><div className="text-[#333] font-bold text-xs mt-0.5" style={{fontFamily: 'cursive'}}>📍 {location}</div></div>
+                                                <div className="text-right"><div className="text-[#888] text-[10px] tracking-widest uppercase">专属见证</div><div className="text-[#d93a3a] font-bold text-base mt-0.5 font-serif-sc">@{displayUserName}</div></div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </>
                                 )}
                             </div>
-
-                            {/* 交互引导 */}
                             {!image && (
                                 <label className="absolute inset-0 z-50 flex flex-col items-center justify-center cursor-pointer bg-black/60 backdrop-blur-sm hover:bg-black/40 transition-colors group">
                                     <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Icon name="image-plus" className="w-8 h-8 text-white" /></div>
@@ -342,13 +349,18 @@
                                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                                 </label>
                             )}
+                            {image && (
+                                <label className="absolute top-4 right-4 z-50 bg-black/50 backdrop-blur-md p-2.5 rounded-full cursor-pointer hover:bg-black text-white transition-colors border border-white/20">
+                                    <Icon name="refresh-cw" className="w-4 h-4" />
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                </label>
+                            )}
                         </div>
 
-                        {/* 控制面板 */}
                         <div className="flex flex-col gap-5">
                             <div className="bg-brand-panel p-5 rounded-2xl border border-white/5 space-y-5">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Scene / 核心场景</label>
+                                    <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase font-sans">Scene / 核心场景</label>
                                     <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
                                         {[
                                             { id: 'honor', label: '荣耀见证', icon: 'award' },
@@ -357,28 +369,26 @@
                                             { id: 'ticket', label: '入场确认', icon: 'ticket' },
                                             { id: 'polaroid', label: '陪伴日记', icon: 'book-open' }
                                         ].map(t => (
-                                            <button key={t.id} onClick={() => setTemplate(t.id)} className={`flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all border shrink-0 min-w-[72px] ${template === t.id ? 'bg-brand-red border-brand-red text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}>
+                                            <button key={t.id} onClick={() => setTemplate(t.id)} className={`flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all border shrink-0 min-w-[72px] font-sans ${template === t.id ? 'bg-brand-red border-brand-red text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}>
                                                 <Icon name={t.icon} className="w-4 h-4 mb-1" /><span className="text-[10px] font-bold tracking-widest">{t.label}</span>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-
                                 {(template === 'honor' || template === 'birthday') && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">Stamp / 印章情绪</label>
+                                        <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase font-sans">Stamp / 印章情绪</label>
                                         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                                            {STAMP_MOODS.map(mood => (<button key={mood} onClick={() => setStampMood(mood)} className={`px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all ${stampMood === mood ? 'bg-brand-gold text-black' : 'bg-white/5 text-gray-400'}`}>{mood}</button>))}
+                                            {STAMP_MOODS.map(mood => (<button key={mood} onClick={() => setStampMood(mood)} className={`px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap font-sans transition-all ${stampMood === mood ? 'bg-brand-gold text-black' : 'bg-white/5 text-gray-400'}`}>{mood}</button>))}
                                         </div>
                                     </div>
                                 )}
-
                                 <div className="p-3 bg-black/30 border border-white/5 rounded-xl space-y-4">
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1.5 font-sans">
                                         <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">{currentContext.eventLabel} <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
                                         <ComboInput value={eventInfo} setValue={setEventInfo} placeholder={`输入或选择...`} options={currentContext.eventOptions} />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-4 font-sans">
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">Target / 运动员 <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
                                             <ComboInput value={athlete} setValue={setAthlete} placeholder="输入运动员" options={QUICK_STARS} />
@@ -389,8 +399,7 @@
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4 font-sans">
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">ID / 你的署名 <span className="lowercase text-gray-600 font-normal tracking-normal">(可填)</span></label>
                                         <ComboInput value={userName} setValue={setUserName} placeholder="输入昵称" options={QUICK_NAMES} />
@@ -400,17 +409,14 @@
                                         <ComboInput value={location} setValue={setLocation} placeholder="选择坐标" options={QUICK_LOCATIONS} />
                                     </div>
                                 </div>
-
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 font-sans">
                                     <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase flex justify-between"><span>Message / 想说的话</span><button onClick={() => setQuote(FAN_QUOTES[Math.floor(Math.random()*FAN_QUOTES.length)])} className="text-brand-gold font-bold">随机换一句</button></label>
                                     <textarea value={quote} onChange={e => setQuote(e.target.value)} rows="2" className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-gold outline-none resize-none leading-relaxed" />
                                 </div>
                             </div>
                         </div>
-
-                        <button onClick={handleDownload} disabled={!image || isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl ${!image ? 'bg-gray-800 text-gray-600' : 'bg-brand-red text-white active:scale-95'}`}>{isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 保存我的海报</>}</button>
-                        
-                        <div className="text-center">
+                        <button onClick={handleDownload} disabled={!image || isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl font-sans ${!image ? 'bg-gray-800 text-gray-600' : 'bg-brand-red text-white active:scale-95'}`}>{isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 保存我的海报</>}</button>
+                        <div className="text-center font-sans">
                             <p className="text-[10px] text-gray-600 font-bold tracking-widest">长按图片可保存分享至朋友圈/小红书</p>
                             <p className="text-[10px] text-gray-600 font-bold tracking-widest mt-1">关注公众号：热爱印记，获取更多专属应援模板</p>
                         </div>
