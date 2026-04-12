@@ -253,7 +253,7 @@
                 }
             };
 
-            // 手动触发下载的按钮方法（兼容电脑端及部分安卓）
+            // 手动触发下载的按钮方法
             const triggerActualDownload = () => {
                 if (!resultImage) return;
                 const link = document.createElement('a');
@@ -269,9 +269,10 @@
                 return <div className={`w-full h-full absolute inset-0 z-0 bg-[#111111] flex items-center justify-center ${filterClass}`}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
             };
 
-            // ⚠️ 终极防御排版：全部采用绝对 Inline CSS Block 布局，彻底抛弃可能引起截图错位的 Flex-bottom 排版
+            // ⚠️ 终极防溢出排版：完全利用 Flexbox 撑满 420x560，抛弃 absolute bottom！
             const posterContent = (
                 <div className="relative overflow-hidden bg-black isolate" style={{ width: '420px', height: '560px', WebkitTextSizeAdjust: '100%', textSizeAdjust: '100%' }}>
+                    {/* 背景层绝对定位即可 */}
                     <div className="absolute inset-0 noise-bg z-[5]"></div>
                     
                     {(template === 'honor' || template === 'birthday') && (
@@ -279,35 +280,43 @@
                             {renderBackground(template === 'birthday' ? 'filter-birthday' : 'filter-honor')}
                             <div className="absolute inset-0 z-10" style={{ background: template === 'birthday' ? 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(255,183,197,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
                             
-                            <div className="absolute top-6 right-6 z-20 flex flex-col items-end antialiased">
-                                <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px', color: '#E0E0E0', fontFamily: 'system-ui, sans-serif' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
-                                <div style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '0.2em', fontStyle: 'italic', fontFamily: 'system-ui, sans-serif', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37' }}>热爱印记</div>
-                            </div>
-
-                            {/* 核心修正：绝对底边距，内部使用标准流式堆叠，物理断绝重叠 */}
-                            <div className="absolute z-20" style={{ bottom: '24px', left: '24px', right: '24px', display: 'block' }}>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', marginBottom: '8px', letterSpacing: '0.05em', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>
-                                        {eventInfo}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                                        <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{athlete}</h2>
-                                        <span style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', margin: 0, lineHeight: 1 }}>{score}</span>
-                                    </div>
-                                    <p style={{ fontSize: '13px', lineHeight: 1.6, borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>
-                                        “{quote}”
-                                    </p>
+                            {/* 💡 前景内容层：全屏 Flex 布局，物理断绝底部切断可能 */}
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 20, display: 'flex', flexDirection: 'column', padding: '24px', boxSizing: 'border-box' }}>
+                                
+                                {/* 顶部区域 */}
+                                <div style={{ alignSelf: 'flex-end', textAlign: 'right' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px', color: '#E0E0E0', fontFamily: 'system-ui, sans-serif' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
+                                    <div style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '0.2em', fontStyle: 'italic', fontFamily: 'system-ui, sans-serif', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37' }}>热爱印记</div>
                                 </div>
 
-                                <div style={{ backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', boxSizing: 'border-box' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '4px' }}>
-                                        <div style={{ fontSize: '9px', color: '#6b7280', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', lineHeight: 1, fontFamily: 'system-ui, sans-serif' }}>现场见证人</div>
-                                        <div style={{ fontSize: '18px', color: '#fff', fontWeight: 700, letterSpacing: '0.1em', fontFamily: '"Songti SC", "STSong", "SimSun", serif', marginBottom: '6px', lineHeight: 1 }}>@{displayUserName}</div>
-                                        <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: 'system-ui, sans-serif' }}>
-                                            📍 坐标：{location}
-                                        </span>
+                                {/* 弹性空间，把下面的内容死死压在底部 */}
+                                <div style={{ flexGrow: 1 }}></div>
+
+                                {/* 底部区域 */}
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', marginBottom: '8px', letterSpacing: '0.05em', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>
+                                            {eventInfo}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
+                                            <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{athlete}</h2>
+                                            <span style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', margin: 0, lineHeight: 1 }}>{score}</span>
+                                        </div>
+                                        <p style={{ fontSize: '13px', lineHeight: 1.6, borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>
+                                            “{quote}”
+                                        </p>
                                     </div>
-                                    <CircularSeal colorClass={template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} moodText={stampMood} fanNo={fanNo} />
+
+                                    <div style={{ backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', boxSizing: 'border-box' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '4px' }}>
+                                            <div style={{ fontSize: '9px', color: '#6b7280', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', lineHeight: 1, fontFamily: 'system-ui, sans-serif' }}>现场见证人</div>
+                                            <div style={{ fontSize: '18px', color: '#fff', fontWeight: 700, letterSpacing: '0.1em', fontFamily: '"Songti SC", "STSong", "SimSun", serif', marginBottom: '6px', lineHeight: 1 }}>@{displayUserName}</div>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: 'system-ui, sans-serif' }}>
+                                                📍 坐标：{location}
+                                            </span>
+                                        </div>
+                                        <CircularSeal colorClass={template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} moodText={stampMood} fanNo={fanNo} />
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -317,30 +326,37 @@
                         <>
                             {renderBackground('filter-cheer')}
                             <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to top, rgba(69,10,10,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
-                            <div className="absolute top-8 left-6 z-20"><div style={{ fontSize: '72px', color: '#E60012', fontWeight: 900, fontStyle: 'italic', opacity: 0.2, transform: 'rotate(-6deg)', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>战</div></div>
-                            <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
-                                <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>出征祈福</div>
-                                <div style={{ fontSize: '12px', fontWeight: 900, fontStyle: 'italic', color: '#E60012', fontFamily: 'system-ui, sans-serif' }}>热爱印记</div>
-                            </div>
                             
-                            <div className="absolute z-20 block" style={{ bottom: '24px', left: '24px', right: '24px' }}>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                        <div style={{ width: '8px', height: '8px', backgroundColor: '#E60012', borderRadius: '50%', boxShadow: '0 0 8px rgba(230,0,18,0.8)' }}></div>
-                                        <div style={{ fontSize: '10px', color: '#fff', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: 'system-ui, sans-serif' }}>夺冠之路</div>
-                                    </div>
-                                    <div style={{ fontSize: '14px', color: '#f87171', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{eventInfo}</div>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
-                                        <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{athlete}</h2>
-                                        <span style={{ fontSize: '24px', color: '#fff', backgroundColor: '#E60012', padding: '4px 8px', transform: 'skewX(-12deg)', fontWeight: 900, display: 'inline-block', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', margin: 0, lineHeight: 1, fontFamily: 'system-ui, sans-serif' }}>{score}</span>
-                                    </div>
+                            {/* 全屏 Flex 骨架 */}
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 20, display: 'flex', flexDirection: 'column', padding: '24px', boxSizing: 'border-box' }}>
+                                <div style={{ position: 'absolute', top: '32px', left: '24px', fontSize: '72px', color: '#E60012', fontWeight: 900, fontStyle: 'italic', opacity: 0.2, transform: 'rotate(-6deg)', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>战</div>
+                                
+                                <div style={{ alignSelf: 'flex-end', textAlign: 'right' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>出征祈福</div>
+                                    <div style={{ fontSize: '12px', fontWeight: 900, fontStyle: 'italic', color: '#E60012', fontFamily: 'system-ui, sans-serif' }}>热爱印记</div>
                                 </div>
-                                <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderLeft: '4px solid #E60012', padding: '12px', marginBottom: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                    <p style={{ fontSize: '13px', color: '#fff', fontWeight: 900, margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>“{quote}”</p>
-                                </div>
-                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#e5e7eb', fontFamily: 'system-ui, sans-serif' }}>
-                                    <div>祈福粉丝: @{displayUserName}</div>
-                                    <div>📍 {location}</div>
+                                
+                                <div style={{ flexGrow: 1 }}></div>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <div style={{ width: '8px', height: '8px', backgroundColor: '#E60012', borderRadius: '50%', boxShadow: '0 0 8px rgba(230,0,18,0.8)' }}></div>
+                                            <div style={{ fontSize: '10px', color: '#fff', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: 'system-ui, sans-serif' }}>夺冠之路</div>
+                                        </div>
+                                        <div style={{ fontSize: '14px', color: '#f87171', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{eventInfo}</div>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                                            <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{athlete}</h2>
+                                            <span style={{ fontSize: '24px', color: '#fff', backgroundColor: '#E60012', padding: '4px 8px', transform: 'skewX(-12deg)', fontWeight: 900, display: 'inline-block', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', margin: 0, lineHeight: 1, fontFamily: 'system-ui, sans-serif' }}>{score}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderLeft: '4px solid #E60012', padding: '12px', marginBottom: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                                        <p style={{ fontSize: '13px', color: '#fff', fontWeight: 900, margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>“{quote}”</p>
+                                    </div>
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#e5e7eb', fontFamily: 'system-ui, sans-serif' }}>
+                                        <div>祈福粉丝: @{displayUserName}</div>
+                                        <div>📍 {location}</div>
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -350,40 +366,44 @@
                         <>
                             {renderBackground('filter-ticket')}
                             <div className="absolute inset-0 bg-black/60 z-10"></div>
-                            <div className="absolute z-20 flex flex-col" style={{ top: '16px', left: '16px', right: '16px', bottom: '16px', border: '3px solid rgba(255,255,255,0.8)' }}>
-                                <div style={{ height: '40px', backgroundColor: '#E60012', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', flexShrink: 0 }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: 'system-ui, sans-serif' }}>专属入场券</div>
-                                    <div style={{ fontSize: '10px', fontStyle: 'italic', fontFamily: 'system-ui, sans-serif' }}>热爱印记</div>
-                                </div>
-                                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                    <div style={{ fontSize: '14px', color: '#E60012', fontWeight: 900, marginBottom: '8px', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{eventInfo}</div>
-                                    <h2 style={{ fontSize: '36px', color: '#fff', fontWeight: 900, marginBottom: '4px', whiteSpace: 'nowrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{athlete}</h2>
-                                    <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.8)', fontWeight: 900, fontStyle: 'italic', fontFamily: 'system-ui, sans-serif' }}>{score}</div>
-                                    <p style={{ fontSize: '13px', color: '#d1d5db', marginTop: '20px', margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif', letterSpacing: '0.05em' }}>"{quote}"</p>
-                                </div>
-                                <div style={{ backgroundColor: '#fff', color: '#000', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                        <div>
-                                            <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6b7280', fontFamily: 'system-ui, sans-serif' }}>专属 ID</div>
-                                            <div style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>@{displayUserName}</div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#E60012', marginBottom: '2px', fontFamily: 'system-ui, sans-serif' }}>观赛坐标</div>
-                                            <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: 'system-ui, sans-serif' }}>{location}</div>
-                                        </div>
+                            
+                            {/* 全屏包裹层 */}
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '16px', boxSizing: 'border-box', zIndex: 20 }}>
+                                <div style={{ border: '3px solid rgba(255,255,255,0.8)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+                                    <div style={{ height: '40px', backgroundColor: '#E60012', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', flexShrink: 0 }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: 'system-ui, sans-serif' }}>专属入场券</div>
+                                        <div style={{ fontSize: '10px', fontStyle: 'italic', fontFamily: 'system-ui, sans-serif' }}>热爱印记</div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '4px', opacity: 0.6, height: '24px' }}>
-                                        {[...Array(32)].map((_, i) => (<div key={i} style={{ backgroundColor: '#000', width: Math.random() > 0.5 ? '1px' : '2px', height: '100%' }}></div>))}
+                                    <div style={{ flexGrow: 1, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                        <div style={{ fontSize: '14px', color: '#E60012', fontWeight: 900, marginBottom: '8px', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{eventInfo}</div>
+                                        <h2 style={{ fontSize: '36px', color: '#fff', fontWeight: 900, marginBottom: '4px', whiteSpace: 'nowrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>{athlete}</h2>
+                                        <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.8)', fontWeight: 900, fontStyle: 'italic', fontFamily: 'system-ui, sans-serif' }}>{score}</div>
+                                        <p style={{ fontSize: '13px', color: '#d1d5db', marginTop: '20px', margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: '"Songti SC", "STSong", "SimSun", serif', letterSpacing: '0.05em' }}>"{quote}"</p>
                                     </div>
-                                    <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: 900, letterSpacing: '0.4em', fontFamily: 'system-ui, sans-serif' }}>NO.{fanNo}</div>
+                                    <div style={{ backgroundColor: '#fff', color: '#000', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                            <div>
+                                                <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6b7280', fontFamily: 'system-ui, sans-serif' }}>专属 ID</div>
+                                                <div style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>@{displayUserName}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#E60012', marginBottom: '2px', fontFamily: 'system-ui, sans-serif' }}>观赛坐标</div>
+                                                <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: 'system-ui, sans-serif' }}>{location}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '4px', opacity: 0.6, height: '24px' }}>
+                                            {[...Array(32)].map((_, i) => (<div key={i} style={{ backgroundColor: '#000', width: Math.random() > 0.5 ? '1px' : '2px', height: '100%' }}></div>))}
+                                        </div>
+                                        <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: 900, letterSpacing: '0.4em', fontFamily: 'system-ui, sans-serif' }}>NO.{fanNo}</div>
+                                    </div>
                                 </div>
                             </div>
                         </>
                     )}
 
                     {template === 'polaroid' && (
-                        <div className="absolute inset-0 z-0 flex flex-col" style={{ backgroundColor: '#f5f5dc', padding: '24px' }}>
-                            <div style={{ flex: 1, backgroundColor: '#000', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)' }}>{renderBackground('filter-polaroid')}</div>
+                        <div className="absolute inset-0 z-20" style={{ backgroundColor: '#f5f5dc', display: 'flex', flexDirection: 'column', padding: '24px', boxSizing: 'border-box' }}>
+                            <div style={{ flexGrow: 1, backgroundColor: '#000', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)' }}>{renderBackground('filter-polaroid')}</div>
                             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingTop: '24px', flexShrink: 0 }}>
                                 <div style={{ color: '#333', fontSize: '13px', fontWeight: 900, lineHeight: 1.6, letterSpacing: '0.05em', fontFamily: '"Songti SC", "STSong", "SimSun", serif' }}>
                                     {eventInfo}，{athlete}{score}。<br/>
@@ -423,7 +443,7 @@
                             </div>
                         </div>
 
-                        {/* 真正的截图源：物理隔离，透明但占位存在，根除裁切！ */}
+                        {/* 真正的截图源：物理隔离，透明但占位存在，彻底根除被系统底切的玄学Bug！ */}
                         <div className="absolute top-0 left-0 z-[-100]" style={{ opacity: 0.01, pointerEvents: 'none' }} aria-hidden="true">
                             <div ref={printRef}>
                                 {posterContent}
@@ -524,7 +544,7 @@
                         </div>
                     </div>
 
-                    {/* 弹窗升级为【真实按钮】方案 */}
+                    {/* 弹窗升级为【明确的下载按钮 + 长按兼容】 */}
                     {resultImage && (
                         <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in">
                             <div className="w-full max-w-sm flex flex-col items-center">
@@ -535,17 +555,17 @@
                                     style={{ pointerEvents: 'auto', WebkitTouchCallout: 'default', userSelect: 'auto', WebkitUserSelect: 'auto', display: 'block' }} 
                                 />
                                 
-                                {/* 这是一个真正的触发下载的按钮！ */}
+                                {/* 真·点击保存按钮 */}
                                 <button 
                                     onClick={triggerActualDownload} 
                                     className="w-full bg-brand-red hover:bg-red-700 text-white px-6 py-3.5 rounded-full font-black text-lg mb-3 shadow-[0_0_20px_rgba(230,0,18,0.4)] flex items-center justify-center gap-2 transition-transform active:scale-95"
                                 >
-                                    <Icon name="download" className="w-5 h-5" /> 立即保存到手机
+                                    <Icon name="download" className="w-5 h-5" /> 点击保存相册 (或长按海报)
                                 </button>
                                 
-                                {/* 长按提示作为容错兜底 */}
+                                {/* 若某些奇葩安卓机型点击没反应，提示他长按 */}
                                 <p className="text-gray-400 text-xs mb-6 text-center">
-                                    💡 提示：如果点击按钮无反应，请直接 <strong className="text-white font-bold">长按上方海报</strong> 保存相册
+                                    💡 若点击失败，请直接长按上方海报保存
                                 </p>
                                 
                                 <button onClick={() => setResultImage(null)} className="text-gray-500 text-sm border-b border-gray-600 pb-1 hover:text-white transition-colors font-bold">
