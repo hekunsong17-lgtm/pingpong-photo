@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🏓 热爱印记 - 专属应援海报生成器</title>
     
-    <!-- 1. 引入 Google Fonts 确保多端字体渲染绝对一致 -->
+    <!-- 终极修复：使用异步非阻塞方式加载 Google Fonts，彻底根除国内网络引起的死机黑屏问题！ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap"></noscript>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -66,9 +67,9 @@
         const POSTER_WIDTH = 420;
         const POSTER_HEIGHT = 560;
 
-        // 全局统一定义字体常量，杜绝各端差异
-        const F_SERIF = '"Noto Serif SC", serif';
-        const F_SANS = '"Noto Sans SC", sans-serif';
+        // 全局统一定义字体常量，即使断网也有兜底的系统安全字体，绝对不崩
+        const F_SERIF = '"Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
+        const F_SANS = '"Noto Sans SC", system-ui, -apple-system, sans-serif';
 
         // 固定的条形码宽度数组，确保预览和截图保持100%一致
         const BARCODE_WIDTHS = [1, 2, 1, 1, 2, 2, 1, 2, 1, 1, 1, 2, 2, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 2, 1, 1, 2, 1, 2, 1, 2];
@@ -99,7 +100,6 @@
         };
 
         // --- 核心组件化：Poster 抽离 --- 
-        // 保证预览区和隐藏截图区使用同一份严格定义的 DOM 树
         const Poster = forwardRef(({ template, image, athlete, eventInfo, score, quote, displayUserName, location, stampMood, fanNo }, ref) => {
             const renderBackground = (filterClass) => {
                 if (image) return <img src={image} className={`w-full h-full object-cover absolute inset-0 z-0 ${filterClass}`} />;
@@ -399,8 +399,10 @@
                 if (!printRef.current) return;
                 setIsGenerating(true);
                 try {
-                    // 双重保障：等待所有 Google Fonts 加载完毕再截图
-                    await document.fonts.ready;
+                    // 安全校验：防止老旧手机浏览器报错崩溃
+                    if (document.fonts && document.fonts.ready) {
+                        await document.fonts.ready;
+                    }
 
                     const canvas = await html2canvas(printRef.current, { 
                         scale: 2, 
@@ -411,8 +413,10 @@
                         windowWidth: POSTER_WIDTH,
                         windowHeight: POSTER_HEIGHT,
                         onclone: async (clonedDoc) => {
-                            // 确保克隆的 DOM 也加载完字体
-                            await clonedDoc.fonts.ready;
+                            // 安全校验：克隆文档的字体加载守护
+                            if (clonedDoc.fonts && clonedDoc.fonts.ready) {
+                                await clonedDoc.fonts.ready;
+                            }
                         }
                     });
                     
@@ -427,7 +431,6 @@
                 }
             };
 
-            // 手动触发下载的按钮方法
             const triggerActualDownload = () => {
                 if (!resultImage) return;
                 const link = document.createElement('a');
@@ -438,7 +441,6 @@
                 document.body.removeChild(link);
             };
 
-            // 提取公共的 Props 以便同时传给【预览组件】和【隐藏截图组件】
             const posterProps = { template, image, athlete, eventInfo, score, quote, displayUserName, location, stampMood, fanNo };
 
             return (
@@ -453,14 +455,13 @@
 
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
                         
-                        {/* 1. 前台预览框：负责根据手机屏幕缩放看效果 */}
                         <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center z-10" style={{ height: `${POSTER_HEIGHT * scale}px` }}>
                             <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0, width: `${POSTER_WIDTH}px`, height: `${POSTER_HEIGHT}px` }}>
                                 <Poster {...posterProps} />
                             </div>
                         </div>
 
-                        {/* 2. 真正的截图源：定位到屏幕外 (-9999px)，保证 DOM 100% 完整渲染，彻底根除透明度被跳过或底切的Bug！ */}
+                        {/* 真正的截图源：定位到屏幕外 (-9999px)，保证 DOM 100% 完整渲染 */}
                         <div className="fixed z-[-100] pointer-events-none" style={{ top: 0, left: '-9999px' }} aria-hidden="true">
                             <Poster ref={printRef} {...posterProps} />
                         </div>
@@ -559,7 +560,6 @@
                         </div>
                     </div>
 
-                    {/* 弹窗升级为【明确的下载按钮 + 长按兼容】 */}
                     {resultImage && (
                         <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in" style={{ fontFamily: F_SANS }}>
                             <div className="w-full max-w-sm flex flex-col items-center">
@@ -570,7 +570,6 @@
                                     style={{ pointerEvents: 'auto', WebkitTouchCallout: 'default', userSelect: 'auto', WebkitUserSelect: 'auto', display: 'block' }} 
                                 />
                                 
-                                {/* 真·点击保存按钮 */}
                                 <button 
                                     onClick={triggerActualDownload} 
                                     className="w-full bg-brand-red hover:bg-red-700 text-white px-6 py-3.5 rounded-full font-black text-lg mb-3 shadow-[0_0_20px_rgba(230,0,18,0.4)] flex items-center justify-center gap-2 transition-transform active:scale-95"
@@ -578,7 +577,6 @@
                                     <Icon name="download" className="w-5 h-5" /> 点击保存相册 (或长按海报)
                                 </button>
                                 
-                                {/* 若某些奇葩安卓机型点击没反应，提示他长按 */}
                                 <p className="text-gray-400 text-xs mb-6 text-center">
                                     💡 若点击失败，请直接长按上方海报保存
                                 </p>
