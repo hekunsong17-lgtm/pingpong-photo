@@ -399,9 +399,13 @@
                 if (!printRef.current) return;
                 setIsGenerating(true);
                 try {
-                    // 安全校验：防止老旧手机浏览器报错崩溃
-                    if (document.fonts && document.fonts.ready) {
-                        await document.fonts.ready;
+                    // 安全容错：捕获不可用的 fonts api 或超时，防止报错导致直接终止。
+                    try {
+                        if (document.fonts && document.fonts.ready) {
+                            await document.fonts.ready;
+                        }
+                    } catch(err) {
+                        console.warn("Font loading wait skipped: ", err);
                     }
 
                     const canvas = await html2canvas(printRef.current, { 
@@ -411,13 +415,8 @@
                         width: POSTER_WIDTH,
                         height: POSTER_HEIGHT,
                         windowWidth: POSTER_WIDTH,
-                        windowHeight: POSTER_HEIGHT,
-                        onclone: async (clonedDoc) => {
-                            // 安全校验：克隆文档的字体加载守护
-                            if (clonedDoc.fonts && clonedDoc.fonts.ready) {
-                                await clonedDoc.fonts.ready;
-                            }
-                        }
+                        windowHeight: POSTER_HEIGHT
+                        // 移除致命的 onclone，避免移动端跨域/沙盒报错导致完全崩溃！
                     });
                     
                     const imgData = canvas.toDataURL('image/jpeg', 0.9);
@@ -425,7 +424,7 @@
 
                 } catch (error) { 
                     console.error(error); 
-                    alert('海报生成失败，请刷新页面重试');
+                    alert('海报生成失败：\n' + (error.message || '未知渲染错误，请刷新重试'));
                 } finally { 
                     setIsGenerating(false); 
                 }
@@ -455,13 +454,14 @@
 
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
                         
+                        {/* 1. 前台预览框：负责根据手机屏幕缩放看效果 */}
                         <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center z-10" style={{ height: `${POSTER_HEIGHT * scale}px` }}>
                             <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0, width: `${POSTER_WIDTH}px`, height: `${POSTER_HEIGHT}px` }}>
                                 <Poster {...posterProps} />
                             </div>
                         </div>
 
-                        {/* 真正的截图源：定位到屏幕外 (-9999px)，保证 DOM 100% 完整渲染 */}
+                        {/* 2. 真正的截图源：定位到屏幕外 (-9999px)，保证 DOM 100% 完整渲染，彻底根除透明度被跳过或底切的Bug！ */}
                         <div className="fixed z-[-100] pointer-events-none" style={{ top: 0, left: '-9999px' }} aria-hidden="true">
                             <Poster ref={printRef} {...posterProps} />
                         </div>
