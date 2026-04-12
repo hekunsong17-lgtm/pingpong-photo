@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🏓 热爱印记 - 专属应援海报生成器</title>
     
-    <!-- 终极修复：使用异步非阻塞方式加载 Google Fonts，彻底根除国内网络引起的死机黑屏问题！ -->
+    <!-- 使用异步非阻塞方式加载 Google Fonts，彻底根除国内网络引起的死机黑屏问题！ -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap" media="print" onload="this.media='all'">
@@ -399,13 +399,17 @@
                 if (!printRef.current) return;
                 setIsGenerating(true);
                 try {
-                    // 安全容错：捕获不可用的 fonts api 或超时，防止报错导致直接终止。
+                    // 安全容错防御机制：利用 Promise.race 给字体检测加 1秒超时
+                    // 防止弱网或部分安卓浏览器因为 fonts API 没响应而永久卡死/黑屏
                     try {
-                        if (document.fonts && document.fonts.ready) {
-                            await document.fonts.ready;
+                        if (document && document.fonts && document.fonts.ready) {
+                            await Promise.race([
+                                document.fonts.ready,
+                                new Promise(resolve => setTimeout(resolve, 1000))
+                            ]);
                         }
                     } catch(err) {
-                        console.warn("Font loading wait skipped: ", err);
+                        console.warn("Font loading wait skipped or timed out: ", err);
                     }
 
                     const canvas = await html2canvas(printRef.current, { 
@@ -416,7 +420,7 @@
                         height: POSTER_HEIGHT,
                         windowWidth: POSTER_WIDTH,
                         windowHeight: POSTER_HEIGHT
-                        // 移除致命的 onclone，避免移动端跨域/沙盒报错导致完全崩溃！
+                        // 坚决不可在此处写 onclone 访问 clonedDoc.fonts，彻底杜绝沙盒报错崩溃！
                     });
                     
                     const imgData = canvas.toDataURL('image/jpeg', 0.9);
@@ -424,7 +428,8 @@
 
                 } catch (error) { 
                     console.error(error); 
-                    alert('海报生成失败：\n' + (error.message || '未知渲染错误，请刷新重试'));
+                    // 暴露出真实错误信息，不再一头雾水
+                    alert('海报生成失败：\n' + (error.message || error.toString() || '未知渲染错误，请刷新重试'));
                 } finally { 
                     setIsGenerating(false); 
                 }
