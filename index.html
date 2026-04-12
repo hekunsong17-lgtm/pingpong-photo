@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🏓 热爱印记 - 专属应援海报生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { red: '#E60012', dark: '#050505', panel: '#111111', gold: '#D4AF37', pink: '#FFB7C5' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <style>
+        /* 100% 零版权风险：全系统安全字体序列 */
+        body { background-color: #050505; color: white; -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .font-serif-sc { font-family: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif; }
+        .font-sans-num { font-family: system-ui, -apple-system, sans-serif; }
+        
+        /* 高级感滤镜预设 */
+        .filter-honor { filter: contrast(1.1) brightness(0.85) saturate(1.1); }
+        .filter-birthday { filter: contrast(1.0) brightness(1.1) saturate(1.2); }
+        .filter-ticket { filter: grayscale(10%) contrast(1.2) brightness(0.85); }
+        .filter-cheer { filter: contrast(1.2) saturate(1.3) brightness(0.9); }
+        .filter-polaroid { filter: contrast(0.9) brightness(1.1) sepia(0.15); }
+        
+        .noise-bg {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.05;
+            pointer-events: none;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.5); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        const Icon = ({ name, className = "", style = {} }) => {
+            const spanRef = useRef(null);
+            useEffect(() => {
+                if (spanRef.current && window.lucide) {
+                    spanRef.current.innerHTML = `<i data-lucide="${name}" class="${className}" style="${Object.entries(style).map(([k,v]) => `${k.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}:${v}`).join(';')}"></i>`;
+                    window.lucide.createIcons({ root: spanRef.current });
+                }
+            }, [name, className, style]);
+            return <span ref={spanRef} className="contents" style={style}></span>;
+        };
+
+        // --- SVG 矢量公章：解决所有 HTML2Canvas 的渲染 Bug ---
+        const CircularSeal = ({ colorClass, moodText, fanNo }) => {
+            return (
+                <div className={`opacity-90 ${colorClass}`} style={{ width: '84px', height: '84px', mixBlendMode: 'screen', transform: 'rotate(-6deg)' }}>
+                    <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                        <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                        <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
+                        <text x="50" y="34" textAnchor="middle" fill="currentColor" fontSize="16" fontWeight="bold" fontFamily='"Songti SC", "STSong", "SimSun", serif' letterSpacing="0.1em">{moodText}</text>
+                        <text x="50" y="55" textAnchor="middle" fill="currentColor" fontSize="16" fontWeight="bold" fontFamily='"Songti SC", "STSong", "SimSun", serif' letterSpacing="0.1em">编号</text>
+                        <text x="50" y="76" textAnchor="middle" fill="currentColor" fontSize="16" fontWeight="bold" fontFamily='system-ui, -apple-system, sans-serif' letterSpacing="0.05em">{fanNo}</text>
+                    </svg>
+                </div>
+            );
+        };
+
+        const FAN_QUOTES = [
+            "无论巅峰低谷，我在，我们都在。",
+            "你只管在赛场上赢，我们在台下为你撑腰。",
+            "见证你的时代，是我作为球迷最大的荣幸。",
+            "踏平坎坷成大道，祝凯旋！",
+            "生日快乐！愿你岁岁平安，永远赤诚。",
+            "抢票成功！终于可以去现场看你发光了！",
+            "你的每一拍，都敲击在我的心跳上。",
+            "哪怕万人阻挡，也要光芒万丈。",
+            "走下领奖台，一切从零开始。",
+            "你永远可以相信中国乒乓球队！",
+            "大心脏！这哪里是在打球，是在打我的命！",
+            "只要心怀热爱，永远都是当打之年。",
+            "你挥拍的瞬间，就是我心里的夏天。",
+            "让二追三，逆风翻盘，这就是竞技体育的魅力！",
+            "千磨万击还坚劲，任尔东西南北风。",
+            "赢了一起狂，输了一起扛。",
+            "场上是对手，场下是朋友，这才是真正的体育精神。",
+            "请继续在你的热爱里闪闪发光吧！",
+            "每一次挥拍都是全力以赴，为你骄傲！",
+            "稳住！你能赢！心跳180也要把比赛看完！"
+        ];
+
+        const STAMP_MOODS = ["见证", "荣耀", "专属", "热爱", "热血", "唯一"];
+        const QUICK_LOCATIONS = ["现场VIP坐席", "现场沉浸前排", "山顶灵魂席位", "凌晨3点的被窝", "带薪摸鱼的工位", "人声鼎沸的直播间", "去往赛场的飞机上"];
+        const QUICK_NAMES = ["莎头的兵", "野生战术大师", "气氛组组长", "速效救心丸VIP", "十年老粉", "前排尖叫鸡", "佛系护体散人"];
+        const QUICK_STARS = ["孙颖莎", "王楚钦", "樊振东", "马龙", "王曼昱", "林诗栋"];
+
+        // --- 动态语境配置：不同页面对应不同的名称和选项 ---
+        const CONTEXT_CONFIG = {
+            honor: {
+                eventLabel: 'EVENT / 赛事名称',
+                eventOptions: ["2026澳门世界杯", "巴黎奥运会", "WTT大满贯赛", "WTT冠军赛", "世乒赛"],
+                resultLabel: 'MOMENT / 高光时刻',
+                resultOptions: ["夺冠", "晋级", "大满贯", "会师", "摘金", "卫冕"]
+            },
+            birthday: {
+                eventLabel: 'THEME / 专属主题',
+                eventOptions: ["全城告白·诞辰日", "岁岁平安", "永远热爱", "生而为赢", "顶峰相见"],
+                resultLabel: 'BLESSING / 限定祝福',
+                resultOptions: ["生日快乐", "永远健康", "无病无伤", "继续发光", "登顶为王"]
+            },
+            cheer: {
+                eventLabel: 'EVENT / 出征赛事',
+                eventOptions: ["2026澳门世界杯", "巴黎奥运会", "WTT大满贯赛", "世乒赛"],
+                resultLabel: 'STATUS / 出征祈福',
+                resultOptions: ["祝凯旋", "加油", "必胜", "等你回家", "剑指冠军"]
+            },
+            ticket: {
+                eventLabel: 'EVENT / 观赛场次',
+                eventOptions: ["2026澳门世界杯", "巴黎奥运会", "WTT大满贯赛", "亚锦赛"],
+                resultLabel: 'STATUS / 抢票时刻',
+                resultOptions: ["抢票成功", "终于等到你", "现场见", "见证高光", "奔赴山海"]
+            },
+            polaroid: {
+                eventLabel: 'EVENT / 记忆场景',
+                eventOptions: ["日常训练", "机场出发", "赛后合影", "夺冠瞬间"],
+                resultLabel: 'MOMENT / 陪伴时刻',
+                resultOptions: ["永远相伴", "巅峰相见", "无论巅峰低谷", "并肩作战"]
+            }
+        };
+
+        const ComboInput = ({ value, setValue, placeholder, options }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const dropdownRef = useRef(null);
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsOpen(false);
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, []);
+            return (
+                <div className="relative w-full" ref={dropdownRef}>
+                    <div className="flex items-center w-full bg-black border border-white/10 rounded-xl focus-within:border-brand-gold transition-colors overflow-hidden">
+                        <input type="text" value={value} onChange={e => setValue(e.target.value)} placeholder={placeholder} className="flex-1 min-w-0 bg-transparent px-3 py-3 text-sm text-white focus:outline-none font-bold" />
+                        <button type="button" onClick={() => setIsOpen(!isOpen)} className="px-3 py-3 text-brand-gold border-l border-white/10 shrink-0 hover:bg-white/5">
+                            <Icon name={isOpen ? "chevron-up" : "chevron-down"} className="w-4 h-4" />
+                        </button>
+                    </div>
+                    {isOpen && (
+                        <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-[#1a1a1a] border border-white/10 rounded-xl z-[100] flex flex-col gap-1 shadow-[0_10px_40px_rgba(0,0,0,0.8)] max-h-48 overflow-y-auto custom-scroll">
+                            {options.map(opt => (
+                                <button key={opt} type="button" onClick={() => { setValue(opt); setIsOpen(false); }} className="text-left px-3 py-2.5 text-xs text-gray-300 bg-black/50 hover:bg-brand-gold hover:text-black rounded-lg transition-colors border border-white/5">{opt}</button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [template, setTemplate] = useState('honor');
+            const [image, setImage] = useState(null);
+            const [athlete, setAthlete] = useState('孙颖莎');
+            
+            const currentContext = CONTEXT_CONFIG[template] || CONTEXT_CONFIG.honor;
+            const [eventInfo, setEventInfo] = useState(currentContext.eventOptions[0]);
+            const [score, setScore] = useState(currentContext.resultOptions[0]);
+            
+            const [quote, setQuote] = useState(FAN_QUOTES[0]);
+            const [userName, setUserName] = useState('');
+            const [location, setLocation] = useState(QUICK_LOCATIONS[0]);
+            const [stampMood, setStampMood] = useState(STAMP_MOODS[0]); 
+            const [fanNo, setFanNo] = useState('');
+            const [isGenerating, setIsGenerating] = useState(false);
+            const printRef = useRef();
+
+            const displayUserName = userName || '你的名字';
+
+            useEffect(() => {
+                setFanNo(Math.floor(Math.random() * 899999 + 100000).toString());
+            }, [template]);
+
+            useEffect(() => {
+                const context = CONTEXT_CONFIG[template] || CONTEXT_CONFIG.honor;
+                setEventInfo(context.eventOptions[0]);
+                setScore(context.resultOptions[0]);
+
+                if (template === 'birthday') { setQuote("愿你岁岁平安，永远赤诚。生日快乐！"); setStampMood("专属"); }
+                else if (template === 'ticket') { setQuote("终于拿到入场券！迫不及待要去现场看你发光了！"); }
+                else if (template === 'cheer') { setQuote("踏平坎坷成大道，祝凯旋！我们在大后方为你加油！"); setStampMood("热血"); }
+                else if (template === 'honor') { setQuote("见证你的时代，是我作为球迷最大的荣幸。"); setStampMood("见证"); }
+            }, [template]);
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => setImage(e.target.result);
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleDownload = async () => {
+                if (!printRef.current) return;
+                setIsGenerating(true);
+                try {
+                    const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true, backgroundColor: '#050505' });
+                    const link = document.createElement('a');
+                    link.download = `热爱印记_${athlete}_${Date.now()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                } catch (error) { console.error(error); } finally { setIsGenerating(false); }
+            };
+
+            const renderBackground = (filterClass) => {
+                if (image) return <img src={image} className={`w-full h-full object-cover absolute inset-0 z-0 ${filterClass}`} />;
+                return <div className={`w-full h-full absolute inset-0 z-0 bg-[#111111] flex items-center justify-center ${filterClass}`}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col items-center pb-12 font-sans bg-black">
+                    {/* 头部装饰 */}
+                    <div className="w-full max-w-md p-5 pb-2 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded bg-brand-red flex items-center justify-center"><Icon name="award" className="w-4 h-4 text-white" /></div>
+                            <h1 className="text-lg font-black tracking-widest text-white italic uppercase">Match Moment</h1>
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-bold border border-gray-800 px-2 py-1 rounded">获取更多应援模板</div>
+                    </div>
+
+                    <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2">
+                        {/* 预览卡片区域 */}
+                        <div className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5" style={{ aspectRatio: '3/4' }}>
+                            <div ref={printRef} className="w-full h-full relative overflow-hidden bg-black isolate">
+                                <div className="absolute inset-0 noise-bg z-[5]"></div>
+                                
+                                {/* 荣耀见证 / 生日限定 布局 */}
+                                {(template === 'honor' || template === 'birthday') && (
+                                    <>
+                                        {renderBackground(template === 'birthday' ? 'filter-birthday' : 'filter-honor')}
+                                        <div className={`absolute inset-0 z-10 ${template === 'birthday' ? 'bg-gradient-to-t from-black via-transparent to-pink-500/10' : 'bg-gradient-to-t from-black via-black/40 to-transparent'}`}></div>
+                                        
+                                        <div className="absolute top-5 right-5 z-20 flex flex-col items-end antialiased" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
+                                            <div className="text-[10px] font-bold tracking-widest uppercase mb-0.5" style={{ color: '#E0E0E0' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
+                                            <div className={`text-[12px] font-black tracking-[0.2em] italic`} style={{ color: template === 'birthday' ? '#FFB7C5' : '#D4AF37' }}>热爱印记</div>
+                                        </div>
+
+                                        <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col">
+                                            <div className="mb-0 transform translate-y-1">
+                                                <div className="text-white font-serif-sc text-sm font-black tracking-wider">{eventInfo}</div>
+                                            </div>
+                                            <div className="flex items-end gap-3 mb-4 mt-0.5">
+                                                <h2 className="text-5xl font-serif-sc font-black text-white leading-none tracking-widest drop-shadow-md">{athlete}</h2>
+                                                <span className={`text-3xl font-sans font-black italic leading-none drop-shadow-md ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`}>{score}</span>
+                                            </div>
+                                            <p className={`text-sm font-serif-sc tracking-wide leading-relaxed mb-6 border-l-2 pl-3 ${template === 'birthday' ? 'text-pink-100 border-brand-pink' : 'text-gray-300 border-brand-gold'}`}>“ {quote} ”</p>
+                                            <div className="bg-black/70 backdrop-blur-xl border border-white/10 rounded-lg p-4 relative overflow-hidden">
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative', zIndex: 10 }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: '4px' }}>
+                                                        <div className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1.5 leading-none">现场见证人</div>
+                                                        <div className="text-white font-bold text-lg tracking-widest font-serif-sc leading-none mb-1.5">@{displayUserName}</div>
+                                                        <span className={`text-[10px] font-bold tracking-widest whitespace-nowrap ${template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'}`}>📍 坐标：{location}</span>
+                                                    </div>
+                                                    <CircularSeal colorClass={template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} moodText={stampMood} fanNo={fanNo} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* 其他模板逻辑 (出征、票务、日记) */}
+                                {template === 'cheer' && (
+                                    <>
+                                        {renderBackground('filter-cheer')}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-black/40 to-transparent z-10"></div>
+                                        <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col">
+                                            <div className="text-red-400 font-bold text-sm tracking-widest mb-1 font-serif-sc">{eventInfo}</div>
+                                            <div className="flex items-end gap-3 mb-4">
+                                                <h2 className="text-5xl font-black text-white italic tracking-widest font-serif-sc drop-shadow-md">{athlete}</h2>
+                                                <span className="text-2xl font-black text-white font-sans bg-brand-red px-2 py-1 transform -skew-x-12">{score}</span>
+                                            </div>
+                                            <div className="bg-white/10 backdrop-blur-md border-l-4 border-brand-red p-3 mb-5"><p className="text-white text-sm font-bold tracking-wide">“ {quote} ”</p></div>
+                                            <div className="flex justify-between items-center border-t border-white/20 pt-3 text-[10px] text-white/70 tracking-widest"><div>祈福粉丝: @{displayUserName}</div><div>📍 {location}</div></div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {template === 'ticket' && (
+                                    <div className="absolute inset-4 border-[3px] border-white/80 z-20 flex flex-col justify-between">
+                                        <div className="p-4 bg-brand-red text-white flex justify-between items-center"><div className="text-xs tracking-[0.3em] font-black">专属入场券</div><div className="text-[10px] opacity-80 italic">热爱印记</div></div>
+                                        <div className="p-5">
+                                            <div className="text-brand-red font-bold text-sm mb-2">{eventInfo}</div>
+                                            <h2 className="text-white text-4xl font-black tracking-tighter uppercase mb-1">{athlete}</h2>
+                                            <div className="text-white/80 text-xl font-black italic tracking-widest mb-6">{score}</div>
+                                            <p className="text-gray-300 text-xs italic font-serif-sc">" {quote} "</p>
+                                        </div>
+                                        <div className="bg-white text-black p-4 mt-auto flex flex-col gap-3 font-sans">
+                                            <div className="flex justify-between items-end">
+                                                <div><div className="text-[10px] font-bold uppercase text-gray-500">专属 ID</div><div className="font-black text-sm uppercase">@{displayUserName}</div></div>
+                                                <div className="text-right"><div className="text-[10px] font-bold uppercase text-brand-red mb-0.5">观赛坐标</div><div className="font-bold text-xs">{location}</div></div>
+                                            </div>
+                                            <div className="text-center text-xs tracking-[0.4em] font-black">NO.{fanNo}</div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {template === 'polaroid' && (
+                                    <div className="absolute inset-0 bg-[#f5f5dc] flex flex-col p-6">
+                                        <div className="flex-1 bg-black relative overflow-hidden">{renderBackground('filter-polaroid')}</div>
+                                        <div className="h-40 flex flex-col justify-between pt-6">
+                                            <div className="text-[#333] font-serif-sc text-sm leading-relaxed font-bold">{eventInfo}，{athlete}{score}。<br/><span className="text-[#666] font-normal italic">"{quote}"</span></div>
+                                            <div className="flex justify-between items-end border-t border-[#ccc] pt-3 font-sans">
+                                                <div><div className="text-[#888] text-[10px] uppercase">记忆坐标</div><div className="text-[#333] font-bold text-xs mt-0.5">📍 {location}</div></div>
+                                                <div className="text-right"><div className="text-[#888] text-[10px] uppercase">专属见证</div><div className="text-[#d93a3a] font-bold text-base mt-0.5">@{displayUserName}</div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 交互引导 */}
+                            {!image && (
+                                <label className="absolute inset-0 z-50 flex flex-col items-center justify-center cursor-pointer bg-black/60 backdrop-blur-sm hover:bg-black/40 transition-colors group">
+                                    <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Icon name="image-plus" className="w-8 h-8 text-white" /></div>
+                                    <span className="text-white text-sm font-bold tracking-widest drop-shadow-md">点击上传照片，应用此排版</span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                </label>
+                            )}
+                        </div>
+
+                        {/* 控制面板 */}
+                        <div className="flex flex-col gap-5">
+                            <div className="bg-brand-panel p-5 rounded-2xl border border-white/5 space-y-5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Scene / 核心场景</label>
+                                    <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                        {[
+                                            { id: 'honor', label: '荣耀见证', icon: 'award' },
+                                            { id: 'birthday', label: '生日限定', icon: 'cake' },
+                                            { id: 'cheer', label: '出征祈福', icon: 'flame' },
+                                            { id: 'ticket', label: '入场确认', icon: 'ticket' },
+                                            { id: 'polaroid', label: '陪伴日记', icon: 'book-open' }
+                                        ].map(t => (
+                                            <button key={t.id} onClick={() => setTemplate(t.id)} className={`flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all border shrink-0 min-w-[72px] ${template === t.id ? 'bg-brand-red border-brand-red text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`}>
+                                                <Icon name={t.icon} className="w-4 h-4 mb-1" /><span className="text-[10px] font-bold tracking-widest">{t.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {(template === 'honor' || template === 'birthday') && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">Stamp / 印章情绪</label>
+                                        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                            {STAMP_MOODS.map(mood => (<button key={mood} onClick={() => setStampMood(mood)} className={`px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all ${stampMood === mood ? 'bg-brand-gold text-black' : 'bg-white/5 text-gray-400'}`}>{mood}</button>))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="p-3 bg-black/30 border border-white/5 rounded-xl space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">{currentContext.eventLabel} <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
+                                        <ComboInput value={eventInfo} setValue={setEventInfo} placeholder={`输入或选择...`} options={currentContext.eventOptions} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">Target / 运动员 <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
+                                            <ComboInput value={athlete} setValue={setAthlete} placeholder="输入运动员" options={QUICK_STARS} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">{currentContext.resultLabel} <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
+                                            <ComboInput value={score} setValue={setScore} placeholder={`输入或选择...`} options={currentContext.resultOptions} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">ID / 你的署名 <span className="lowercase text-gray-600 font-normal tracking-normal">(可填)</span></label>
+                                        <ComboInput value={userName} setValue={setUserName} placeholder="输入昵称" options={QUICK_NAMES} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Loc / 观赛坐标 <span className="lowercase text-gray-600 font-normal tracking-normal">(可填)</span></label>
+                                        <ComboInput value={location} setValue={setLocation} placeholder="选择坐标" options={QUICK_LOCATIONS} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase flex justify-between"><span>Message / 想说的话</span><button onClick={() => setQuote(FAN_QUOTES[Math.floor(Math.random()*FAN_QUOTES.length)])} className="text-brand-gold font-bold">随机换一句</button></label>
+                                    <textarea value={quote} onChange={e => setQuote(e.target.value)} rows="2" className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-gold outline-none resize-none leading-relaxed" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onClick={handleDownload} disabled={!image || isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl ${!image ? 'bg-gray-800 text-gray-600' : 'bg-brand-red text-white active:scale-95'}`}>{isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 保存我的海报</>}</button>
+                        
+                        <div className="text-center">
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">长按图片可保存分享至朋友圈/小红书</p>
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest mt-1">关注公众号：热爱印记，获取更多专属应援模板</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
