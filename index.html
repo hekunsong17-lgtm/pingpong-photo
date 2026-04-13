@@ -134,28 +134,29 @@
 
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ marginBottom: '16px' }}>
-                                        {/* 绝对防重叠：废弃空div隔离，直接使用 marginBottom。行高使用确切像素，绝不塌陷！ */}
-                                        <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', letterSpacing: '0.05em', fontFamily: F_SERIF, lineHeight: '20px', wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '8px' }}>
+                                        {/* 赛事单独一行，脱离 Flex 牵连，固定 lineHeight: 1 */}
+                                        <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', letterSpacing: '0.05em', fontFamily: F_SERIF, lineHeight: 1, wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '8px' }}>
                                             {eventInfo}
                                         </div>
 
-                                        {/* 绝对防重叠：用 alignItems: 'flex-end' 替代有 Bug 的 baseline。行高死锁为字体大小像素值 */}
-                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '12px' }}>
-                                            <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: '44px', fontFamily: F_SERIF }}>{athlete}</h2>
-                                            <span style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', margin: 0, lineHeight: '30px', fontFamily: F_SANS }}>{score}</span>
+                                        {/* 运动员+成绩 flex baseline，各自固定 lineHeight: 1 */}
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
+                                            <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: F_SERIF }}>{athlete}</h2>
+                                            <span style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', margin: 0, lineHeight: 1, fontFamily: F_SANS }}>{score}</span>
                                         </div>
 
-                                        <p style={{ fontSize: '13px', lineHeight: '22px', borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF }}>
+                                        {/* 引言采用 break-all 防止长句溢出 */}
+                                        <p style={{ fontSize: '13px', lineHeight: 1.6, borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF }}>
                                             “{quote}”
                                         </p>
                                     </div>
 
-                                    {/* 底部信息卡固定高度，左侧垂直居中对齐，右侧自适应居中 */}
-                                    <div style={{ backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box', height: '116px', flexShrink: 0, width: '100%' }}>
+                                    {/* 底部信息卡固定高度，左侧 flex-col 对齐，右侧圆形印章 alignSelf: center */}
+                                    <div style={{ backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0 16px', display: 'flex', justifyContent: 'space-between', boxSizing: 'border-box', height: '116px', flexShrink: 0, width: '100%' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                            <div style={{ fontSize: '9px', color: '#6b7280', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', lineHeight: '10px', fontFamily: F_SANS }}>现场见证人</div>
-                                            <div style={{ fontSize: '18px', color: '#fff', fontWeight: 700, letterSpacing: '0.1em', fontFamily: F_SERIF, marginBottom: '6px', lineHeight: '20px' }}>@{displayUserName}</div>
-                                            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: F_SANS, lineHeight: '12px' }}>
+                                            <div style={{ fontSize: '9px', color: '#6b7280', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', lineHeight: 1, fontFamily: F_SANS }}>现场见证人</div>
+                                            <div style={{ fontSize: '18px', color: '#fff', fontWeight: 700, letterSpacing: '0.1em', fontFamily: F_SERIF, marginBottom: '6px', lineHeight: 1 }}>@{displayUserName}</div>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', whiteSpace: 'nowrap', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: F_SANS, lineHeight: 1 }}>
                                                 [ 坐标 ] {location}
                                             </span>
                                         </div>
@@ -187,22 +188,26 @@
                                     <div style={{ marginBottom: '16px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                             <div style={{ width: '8px', height: '8px', backgroundColor: '#E60012', borderRadius: '50%', boxShadow: '0 0 8px rgba(230,0,18,0.8)' }}></div>
-                                            <div style={{ fontSize: '10px', color: '#fff', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: F_SANS }}>夺冠之路</div>
+                                            <div style={{ fontSize: '10px', color: '#fff', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: F_SANS, lineHeight: 1 }}>夺冠之路</div>
                                         </div>
-                                        <div style={{ fontSize: '14px', color: '#f87171', fontWeight: 900, letterSpacing: '0.1em', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: '20px', wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '6px' }}>
+                                        {/* 赛事单独一行 */}
+                                        <div style={{ fontSize: '14px', color: '#f87171', fontWeight: 900, letterSpacing: '0.1em', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: 1, wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '6px' }}>
                                             {eventInfo}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
-                                            <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: '44px', fontFamily: F_SERIF }}>{athlete}</h2>
-                                            <span style={{ fontSize: '24px', color: '#fff', backgroundColor: '#E60012', padding: '4px 8px', transform: 'skewX(-12deg)', fontWeight: 900, display: 'inline-block', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', margin: 0, lineHeight: '24px', fontFamily: F_SANS }}>{score}</span>
+                                        {/* 运动员+成绩 baseline */}
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                                            <h2 style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', margin: 0, lineHeight: 1, fontFamily: F_SERIF }}>{athlete}</h2>
+                                            <span style={{ fontSize: '24px', color: '#fff', backgroundColor: '#E60012', padding: '4px 8px', transform: 'skewX(-12deg)', fontWeight: 900, display: 'inline-block', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', margin: 0, lineHeight: 1, fontFamily: F_SANS }}>{score}</span>
                                         </div>
                                     </div>
 
+                                    {/* 引言防长句溢出 */}
                                     <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderLeft: '4px solid #E60012', padding: '12px', marginBottom: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                        <p style={{ fontSize: '13px', color: '#fff', fontWeight: 900, margin: 0, wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, lineHeight: '22px' }}>“{quote}”</p>
+                                        <p style={{ fontSize: '13px', color: '#fff', fontWeight: 900, margin: 0, wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, lineHeight: 1.6 }}>“{quote}”</p>
                                     </div>
 
-                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#e5e7eb', fontFamily: F_SANS }}>
+                                    {/* 坐标纯ASCII化 */}
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#e5e7eb', fontFamily: F_SANS, lineHeight: 1 }}>
                                         <div>祈福粉丝: @{displayUserName}</div>
                                         <div>[ 坐标 ] {location}</div>
                                     </div>
@@ -219,34 +224,39 @@
                             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, padding: '16px', boxSizing: 'border-box', zIndex: 20 }}>
                                 <div style={{ border: '3px solid rgba(255,255,255,0.8)', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                                     <div style={{ height: '40px', backgroundColor: '#E60012', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', flexShrink: 0 }}>
-                                        <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: F_SANS }}>专属入场券</div>
-                                        <div style={{ fontSize: '10px', fontStyle: 'italic', fontFamily: F_SANS }}>热爱印记</div>
+                                        <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: F_SANS, lineHeight: 1 }}>专属入场券</div>
+                                        <div style={{ fontSize: '10px', fontStyle: 'italic', fontFamily: F_SANS, lineHeight: 1 }}>热爱印记</div>
                                     </div>
                                     <div style={{ flexGrow: 1, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <div style={{ fontSize: '14px', color: '#E60012', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '20px', wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '8px' }}>
+                                        {/* 赛事单独一行 */}
+                                        <div style={{ fontSize: '14px', color: '#E60012', fontWeight: 900, fontFamily: F_SERIF, lineHeight: 1, wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '8px' }}>
                                             {eventInfo}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '16px' }}>
-                                            <h2 style={{ fontSize: '36px', color: '#fff', fontWeight: 900, margin: 0, whiteSpace: 'nowrap', fontFamily: F_SERIF, lineHeight: '36px' }}>{athlete}</h2>
-                                            <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.8)', fontWeight: 900, fontStyle: 'italic', fontFamily: F_SANS, margin: 0, lineHeight: '24px' }}>{score}</div>
+                                        {/* 运动员+成绩 baseline */}
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
+                                            <h2 style={{ fontSize: '36px', color: '#fff', fontWeight: 900, margin: 0, whiteSpace: 'nowrap', fontFamily: F_SERIF, lineHeight: 1 }}>{athlete}</h2>
+                                            <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.8)', fontWeight: 900, fontStyle: 'italic', fontFamily: F_SANS, margin: 0, lineHeight: 1 }}>{score}</div>
                                         </div>
-                                        <p style={{ fontSize: '13px', color: '#d1d5db', margin: 0, wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, letterSpacing: '0.05em', lineHeight: '22px' }}>"{quote}"</p>
+                                        {/* 引言防长句溢出 */}
+                                        <p style={{ fontSize: '13px', color: '#d1d5db', margin: 0, wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, letterSpacing: '0.05em', lineHeight: 1.6 }}>"{quote}"</p>
                                     </div>
+                                    
                                     <div style={{ backgroundColor: '#fff', color: '#000', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                                             <div>
-                                                <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6b7280', fontFamily: F_SANS, lineHeight: '12px' }}>专属 ID</div>
-                                                <div style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', fontFamily: F_SERIF, lineHeight: '20px', marginTop: '2px' }}>@{displayUserName}</div>
+                                                <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6b7280', fontFamily: F_SANS, lineHeight: 1, marginBottom: '2px' }}>专属 ID</div>
+                                                <div style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', fontFamily: F_SERIF, lineHeight: 1 }}>@{displayUserName}</div>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#E60012', marginBottom: '2px', fontFamily: F_SANS, lineHeight: '12px' }}>观赛坐标</div>
-                                                <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: F_SANS, lineHeight: '16px' }}>[ 坐标 ] {location}</div>
+                                                {/* 坐标纯ASCII化 */}
+                                                <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#E60012', marginBottom: '2px', fontFamily: F_SANS, lineHeight: 1 }}>观赛坐标</div>
+                                                <div style={{ fontSize: '12px', fontWeight: 900, fontFamily: F_SANS, lineHeight: 1 }}>[ 坐标 ] {location}</div>
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '4px', opacity: 0.6, height: '24px' }}>
                                             {BARCODE_WIDTHS.map((width, i) => (<div key={i} style={{ backgroundColor: '#000', width: `${width}px`, height: '100%' }}></div>))}
                                         </div>
-                                        <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: 900, letterSpacing: '0.4em', fontFamily: F_SANS }}>NO.{fanNo}</div>
+                                        <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: 900, letterSpacing: '0.4em', fontFamily: F_SANS, lineHeight: 1 }}>NO.{fanNo}</div>
                                     </div>
                                 </div>
                             </div>
@@ -258,21 +268,25 @@
                             <div style={{ flexGrow: 1, backgroundColor: '#000', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)' }}>{renderBackground('filter-polaroid')}</div>
                             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingTop: '24px', flexShrink: 0 }}>
                                 <div style={{ color: '#333', fontSize: '13px', fontWeight: 900, letterSpacing: '0.05em', fontFamily: F_SERIF, wordBreak: 'break-all' }}>
-                                    <div style={{ lineHeight: '20px', wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '6px' }}>{eventInfo}</div>
-                                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', marginBottom: '6px' }}>
-                                        <span style={{ fontSize: '16px', lineHeight: '16px' }}>{athlete}</span>
-                                        <span style={{ fontSize: '14px', lineHeight: '14px' }}>{score}</span>
+                                    {/* 赛事单独一行 */}
+                                    <div style={{ lineHeight: 1, wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: '6px' }}>{eventInfo}</div>
+                                    {/* 运动员+成绩 baseline */}
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '6px' }}>
+                                        <span style={{ fontSize: '16px', lineHeight: 1 }}>{athlete}</span>
+                                        <span style={{ fontSize: '14px', lineHeight: 1 }}>{score}</span>
                                     </div>
-                                    <span style={{ color: '#666', fontWeight: 400, fontStyle: 'italic', fontFamily: F_SERIF, display: 'block', lineHeight: '22px' }}>"{quote}"</span>
+                                    {/* 引言防长句溢出 */}
+                                    <span style={{ color: '#666', fontWeight: 400, fontStyle: 'italic', fontFamily: F_SERIF, display: 'block', lineHeight: 1.6, wordBreak: 'break-all' }}>"{quote}"</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #ccc', paddingTop: '12px', marginTop: '12px' }}>
                                     <div>
-                                        <div style={{ color: '#888', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: F_SANS }}>记忆坐标</div>
-                                        <div style={{ color: '#333', fontSize: '12px', fontWeight: 900, marginTop: '2px', fontFamily: F_SANS }}>[ 坐标 ] {location}</div>
+                                        <div style={{ color: '#888', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: F_SANS, lineHeight: 1, marginBottom: '2px' }}>记忆坐标</div>
+                                        {/* 坐标纯ASCII化 */}
+                                        <div style={{ color: '#333', fontSize: '12px', fontWeight: 900, fontFamily: F_SANS, lineHeight: 1 }}>[ 坐标 ] {location}</div>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <div style={{ color: '#888', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: F_SANS }}>专属见证</div>
-                                        <div style={{ color: '#d93a3a', fontSize: '16px', fontWeight: 900, marginTop: '2px', fontFamily: F_SERIF }}>@{displayUserName}</div>
+                                        <div style={{ color: '#888', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: F_SANS, lineHeight: 1, marginBottom: '2px' }}>专属见证</div>
+                                        <div style={{ color: '#d93a3a', fontSize: '16px', fontWeight: 900, fontFamily: F_SERIF, lineHeight: 1 }}>@{displayUserName}</div>
                                     </div>
                                 </div>
                             </div>
