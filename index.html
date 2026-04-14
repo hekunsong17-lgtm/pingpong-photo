@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🏓 热爱印记 - 专属应援海报生成器</title>
+    <title>🏓 热爱印记 - 海报生成器</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +15,9 @@
             document.head.appendChild(link);
         })();
     </script>
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap">
+    </noscript>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -48,9 +51,9 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         .offscreen-render {
-            position: fixed !important; top: 0 !important; left: -9999px !important;
+            position: fixed !important; top: 0 !important; left: 0 !important;
             width: 420px !important; height: 560px !important;
-            z-index: -1 !important;
+            z-index: -1 !important; opacity: 0 !important;
             pointer-events: none !important; overflow: hidden !important;
         }
     </style>
@@ -92,10 +95,11 @@
         );
 
         /*
-         * ========== V5 终极排错修复版 ==========
-         * 1. 彻底禁用空 div 垫片和硬编码 height，完全依赖标准盒模型的 marginBottom 撑开间距。
-         * 2. 取消 span 的 vertical-align 等复杂属性，只利用原生文本流布局。
-         * 3. 绝不给文本父级设定高度，避免 html2canvas 计算失误导致内容溢出交叉。
+         * ========== V6 终极防线排版 ==========
+         * 彻底抛弃各种浮动、flex 弹性高度、无约束的 margin 间距。
+         * 一律采用 `display: block` 容器 + `paddingBottom` 进行严格像素撑开。
+         * 对于同行混合字体大小，外层强制 `fontSize: 0, lineHeight: 0`，
+         * 内层使用 `verticalAlign: bottom` 并设定绝对 `lineHeight` 像素。
          */
         const Poster = forwardRef(({ template, image, athlete, eventInfo, score, quote, displayUserName, location, stampMood, fanNo }, ref) => {
             const renderBg = (fc) => {
@@ -106,13 +110,13 @@
             const BottomCard = ({ accentColor }) => (
                 <div style={{ position:'absolute', bottom:'24px', left:'24px', right:'24px', height:'116px', backgroundColor:'rgba(0,0,0,0.7)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'8px', boxSizing:'border-box', overflow:'hidden' }}>
                     <div style={{ position:'absolute', top:'28px', left:'16px' }}>
-                        <div style={{ fontSize:'9px', color:'#6b7280', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:F_SANS }}>现场见证人</div>
+                        <div style={{ fontSize:'9px', color:'#6b7280', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:F_SANS, lineHeight:'12px' }}>现场见证人</div>
                     </div>
                     <div style={{ position:'absolute', top:'46px', left:'16px' }}>
-                        <div style={{ fontSize:'18px', color:'#fff', fontWeight:700, letterSpacing:'0.1em', fontFamily:F_SERIF }}>@{displayUserName}</div>
+                        <div style={{ fontSize:'18px', color:'#fff', fontWeight:700, letterSpacing:'0.1em', fontFamily:F_SERIF, lineHeight:'22px' }}>@{displayUserName}</div>
                     </div>
                     <div style={{ position:'absolute', top:'76px', left:'16px' }}>
-                        <div style={{ fontSize:'10px', fontWeight:700, letterSpacing:'0.1em', whiteSpace:'nowrap', color:accentColor, fontFamily:F_SANS }}>[ 坐标 ] {location}</div>
+                        <div style={{ fontSize:'10px', fontWeight:700, letterSpacing:'0.1em', whiteSpace:'nowrap', color:accentColor, fontFamily:F_SANS, lineHeight:'14px' }}>[ 坐标 ] {location}</div>
                     </div>
                     <div style={{ position:'absolute', top:'16px', right:'16px', width:'84px', height:'84px' }}>
                         <CircularSeal colorClass="" moodText={stampMood} fanNo={fanNo} />
@@ -121,7 +125,7 @@
             );
 
             return (
-                <div ref={ref} style={{ position:'relative', overflow:'hidden', background:'#000', width:'420px', height:'560px', WebkitTextSizeAdjust:'100%', textSizeAdjust:'100%' }}>
+                <div ref={ref} style={{ position:'relative', overflow:'hidden', background:'#000', width:'420px', height:'560px', WebkitTextSizeAdjust:'100%', textSizeAdjust:'100%', isolation: 'isolate' }}>
                     <div className="noise-bg" style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',zIndex:5 }}></div>
 
                     {/* ==================== HONOR / BIRTHDAY ==================== */}
@@ -131,23 +135,32 @@
                             <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',zIndex:10, background: template === 'birthday' ? 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(255,183,197,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
 
                             <div style={{ position:'absolute', top:'24px', right:'24px', textAlign:'right', zIndex:20 }}>
-                                <div style={{ fontSize:'10px', fontWeight:'bold', letterSpacing:'0.1em', textTransform:'uppercase', color:'#E0E0E0', fontFamily:F_SANS, marginBottom:'2px' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
-                                <div style={{ fontSize:'12px', fontWeight:900, letterSpacing:'0.2em', fontStyle:'italic', fontFamily:F_SANS, color: template === 'birthday' ? '#FFB7C5' : '#D4AF37' }}>热爱印记</div>
+                                <div style={{ fontSize:'10px', fontWeight:'bold', letterSpacing:'0.1em', textTransform:'uppercase', color:'#E0E0E0', fontFamily:F_SANS, lineHeight:'14px', marginBottom:'2px' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
+                                <div style={{ fontSize:'12px', fontWeight:900, letterSpacing:'0.2em', fontStyle:'italic', fontFamily:F_SANS, color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', lineHeight:'16px' }}>热爱印记</div>
                             </div>
 
                             <div style={{ position:'absolute', bottom:'156px', left:'24px', right:'24px', zIndex:20 }}>
-                                {/* 赛事名：单纯使用 margin-bottom 隔开间距，不写死高度 */}
-                                <div style={{ fontSize:'14px', color:'#fff', fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.8)', letterSpacing:'0.05em', fontFamily:F_SERIF, wordBreak:'break-word', whiteSpace:'pre-wrap', marginBottom:'8px' }}>
-                                    {eventInfo}
+                                {/* 赛事名：用 block + paddingBottom 硬隔离 */}
+                                <div style={{ display:'block', width:'100%', paddingBottom:'8px' }}>
+                                    <div style={{ display:'block', fontSize:'14px', color:'#fff', fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.8)', letterSpacing:'0.05em', fontFamily:F_SERIF, lineHeight:'14px', wordBreak:'break-word', whiteSpace:'pre-wrap' }}>
+                                        {eventInfo}
+                                    </div>
                                 </div>
-                                {/* 运动员名 + 成绩：同样不写死外层高度，用自然流 marginBottom */}
-                                <div style={{ marginBottom:'12px' }}>
-                                    <span style={{ fontSize:'44px', color:'#fff', fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.8)', fontFamily:F_SERIF, marginRight:'12px' }}>{athlete}</span>
-                                    <span style={{ fontSize:'30px', fontWeight:900, fontStyle:'italic', textShadow:'0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily:F_SANS }}>{score}</span>
+                                
+                                {/* 运动员名 + 成绩：父容器 fontSize:0 消除空格幽灵字符，内联采用精准行高 */}
+                                <div style={{ display:'block', width:'100%', paddingBottom:'12px' }}>
+                                    <div style={{ display:'block', fontSize:0, lineHeight:0, whiteSpace:'nowrap' }}>
+                                        <span style={{ display:'inline-block', fontSize:'44px', color:'#fff', fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.8)', fontFamily:F_SERIF, lineHeight:'44px', verticalAlign:'bottom' }}>{athlete}</span>
+                                        <span style={{ display:'inline-block', width:'12px', height:'1px' }}></span>
+                                        <span style={{ display:'inline-block', fontSize:'30px', fontWeight:900, fontStyle:'italic', textShadow:'0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily:F_SANS, lineHeight:'30px', verticalAlign:'bottom', position:'relative', top:'-2px' }}>{score}</span>
+                                    </div>
                                 </div>
-                                {/* 引用语：边界明确，文本包围框完整 */}
-                                <div style={{ fontSize:'13px', lineHeight:1.6, borderLeft:`2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft:'12px', textShadow:'0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak:'break-all', whiteSpace:'pre-wrap', fontFamily:F_SERIF }}>
-                                    "{quote}"
+
+                                {/* 引用语：严格包围盒 */}
+                                <div style={{ display:'block', width:'100%' }}>
+                                    <div style={{ display:'block', fontSize:'13px', lineHeight:'22px', borderLeft:`2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft:'12px', textShadow:'0 1px 2px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak:'break-all', whiteSpace:'pre-wrap', fontFamily:F_SERIF }}>
+                                        "{quote}"
+                                    </div>
                                 </div>
                             </div>
 
@@ -163,33 +176,43 @@
                             {renderBg('filter-cheer')}
                             <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',zIndex:10, background:'linear-gradient(to top, rgba(69,10,10,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
                             
-                            <div style={{ position:'absolute', top:'32px', left:'24px', fontSize:'72px', color:'#E60012', fontWeight:900, fontStyle:'italic', opacity:0.2, transform:'rotate(-6deg)', fontFamily:F_SERIF, zIndex:20 }}>战</div>
+                            <div style={{ position:'absolute', top:'32px', left:'24px', fontSize:'72px', color:'#E60012', fontWeight:900, fontStyle:'italic', opacity:0.2, transform:'rotate(-6deg)', fontFamily:F_SERIF, lineHeight:'72px', zIndex:20 }}>战</div>
                             
                             <div style={{ position:'absolute', top:'24px', right:'24px', textAlign:'right', zIndex:20 }}>
-                                <div style={{ fontSize:'10px', fontWeight:700, textTransform:'uppercase', color:'#fff', fontFamily:F_SANS, marginBottom:'2px' }}>出征祈福</div>
-                                <div style={{ fontSize:'12px', fontWeight:900, fontStyle:'italic', color:'#E60012', fontFamily:F_SANS }}>热爱印记</div>
+                                <div style={{ fontSize:'10px', fontWeight:700, textTransform:'uppercase', color:'#fff', fontFamily:F_SANS, lineHeight:'14px', marginBottom:'2px' }}>出征祈福</div>
+                                <div style={{ fontSize:'12px', fontWeight:900, fontStyle:'italic', color:'#E60012', fontFamily:F_SANS, lineHeight:'16px' }}>热爱印记</div>
                             </div>
 
                             <div style={{ position:'absolute', bottom:'24px', left:'24px', right:'24px', zIndex:20 }}>
-                                <div style={{ marginBottom:'8px' }}>
-                                    <span style={{ display:'inline-block', width:'8px', height:'8px', backgroundColor:'#E60012', borderRadius:'50%', boxShadow:'0 0 8px rgba(230,0,18,0.8)', marginRight:'8px' }}></span>
-                                    <span style={{ fontSize:'10px', color:'#fff', fontWeight:900, letterSpacing:'0.3em', textTransform:'uppercase', textShadow:'0 1px 2px rgba(0,0,0,0.8)', fontFamily:F_SANS }}>夺冠之路</span>
+                                <div style={{ display:'block', width:'100%', paddingBottom:'8px' }}>
+                                    <div style={{ display:'block', fontSize:0, lineHeight:0 }}>
+                                        <span style={{ display:'inline-block', width:'8px', height:'8px', backgroundColor:'#E60012', borderRadius:'50%', boxShadow:'0 0 8px rgba(230,0,18,0.8)', verticalAlign:'middle' }}></span>
+                                        <span style={{ display:'inline-block', width:'8px', height:'1px' }}></span>
+                                        <span style={{ display:'inline-block', fontSize:'10px', color:'#fff', fontWeight:900, letterSpacing:'0.3em', textTransform:'uppercase', textShadow:'0 1px 2px rgba(0,0,0,0.8)', fontFamily:F_SANS, lineHeight:'10px', verticalAlign:'middle' }}>夺冠之路</span>
+                                    </div>
                                 </div>
                                 
-                                <div style={{ fontSize:'14px', color:'#f87171', fontWeight:900, letterSpacing:'0.1em', textShadow:'0 1px 2px rgba(0,0,0,0.8)', fontFamily:F_SERIF, wordBreak:'break-word', whiteSpace:'pre-wrap', marginBottom:'6px' }}>{eventInfo}</div>
+                                <div style={{ display:'block', width:'100%', paddingBottom:'6px' }}>
+                                    <div style={{ display:'block', fontSize:'14px', color:'#f87171', fontWeight:900, letterSpacing:'0.1em', textShadow:'0 1px 2px rgba(0,0,0,0.8)', fontFamily:F_SERIF, lineHeight:'14px', wordBreak:'break-word', whiteSpace:'pre-wrap' }}>{eventInfo}</div>
+                                </div>
                                 
-                                <div style={{ marginBottom:'16px' }}>
-                                    <span style={{ fontSize:'44px', color:'#fff', fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.8)', fontFamily:F_SERIF, marginRight:'12px' }}>{athlete}</span>
-                                    <span style={{ fontSize:'24px', color:'#fff', backgroundColor:'#E60012', padding:'4px 8px', transform:'skewX(-12deg)', fontWeight:900, display:'inline-block', boxShadow:'0 4px 6px rgba(0,0,0,0.3)', fontFamily:F_SANS }}>{score}</span>
+                                <div style={{ display:'block', width:'100%', paddingBottom:'16px' }}>
+                                    <div style={{ display:'block', whiteSpace:'nowrap', fontSize:0, lineHeight:0 }}>
+                                        <span style={{ display:'inline-block', fontSize:'44px', color:'#fff', fontWeight:900, textShadow:'0 2px 4px rgba(0,0,0,0.8)', fontFamily:F_SERIF, lineHeight:'44px', verticalAlign:'bottom' }}>{athlete}</span>
+                                        <span style={{ display:'inline-block', width:'12px', height:'1px' }}></span>
+                                        <span style={{ display:'inline-block', fontSize:'24px', color:'#fff', backgroundColor:'#E60012', padding:'4px 8px', transform:'skewX(-12deg)', fontWeight:900, boxShadow:'0 4px 6px rgba(0,0,0,0.3)', fontFamily:F_SANS, lineHeight:'24px', verticalAlign:'bottom', position:'relative', top:'-6px' }}>{score}</span>
+                                    </div>
                                 </div>
 
-                                <div style={{ backgroundColor:'rgba(255,255,255,0.1)', borderLeft:'4px solid #E60012', padding:'12px', boxShadow:'0 4px 6px rgba(0,0,0,0.1)', marginBottom:'16px' }}>
-                                    <div style={{ fontSize:'13px', color:'#fff', fontWeight:900, wordBreak:'break-all', whiteSpace:'pre-wrap', fontFamily:F_SERIF, lineHeight:1.6 }}>"{quote}"</div>
+                                <div style={{ display:'block', width:'100%', paddingBottom:'16px' }}>
+                                    <div style={{ display:'block', backgroundColor:'rgba(255,255,255,0.1)', borderLeft:'4px solid #E60012', padding:'12px', boxShadow:'0 4px 6px rgba(0,0,0,0.1)' }}>
+                                        <div style={{ display:'block', fontSize:'13px', color:'#fff', fontWeight:900, margin:0, wordBreak:'break-all', whiteSpace:'pre-wrap', fontFamily:F_SERIF, lineHeight:'22px' }}>"{quote}"</div>
+                                    </div>
                                 </div>
 
-                                <div style={{ borderTop:'1px solid rgba(255,255,255,0.2)', paddingTop:'12px', overflow:'hidden' }}>
-                                    <span style={{ float:'left', fontSize:'10px', color:'#e5e7eb', fontFamily:F_SANS }}>祈福粉丝: @{displayUserName}</span>
-                                    <span style={{ float:'right', fontSize:'10px', color:'#e5e7eb', fontFamily:F_SANS }}>[ 坐标 ] {location}</span>
+                                <div style={{ position:'relative', borderTop:'1px solid rgba(255,255,255,0.2)', paddingTop:'12px', height:'26px', boxSizing:'border-box', width:'100%' }}>
+                                    <div style={{ position:'absolute', top:'12px', left:0, fontSize:'10px', color:'#e5e7eb', fontFamily:F_SANS, lineHeight:'14px' }}>祈福粉丝: @{displayUserName}</div>
+                                    <div style={{ position:'absolute', top:'12px', right:0, fontSize:'10px', color:'#e5e7eb', fontFamily:F_SANS, lineHeight:'14px' }}>[ 坐标 ] {location}</div>
                                 </div>
                             </div>
                         </>
@@ -198,42 +221,49 @@
                     {/* ==================== TICKET ==================== */}
                     {template === 'ticket' && (
                         <>
-                            {renderBackground('filter-ticket')}
+                            {renderBg('filter-ticket')}
                             <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px', background:'rgba(0,0,0,0.6)', zIndex:10 }}></div>
                             
                             <div style={{ position:'absolute', top:'16px', left:'16px', width:'388px', height:'528px', border:'3px solid rgba(255,255,255,0.8)', boxSizing:'border-box', zIndex:20 }}>
                                 {/* 顶部红条 */}
-                                <div style={{ position:'absolute', top:0, left:0, right:0, height:'40px', backgroundColor:'#E60012', overflow:'hidden' }}>
-                                    <span style={{ position:'absolute', left:'16px', top:'12px', fontSize:'12px', fontWeight:900, color:'#fff', fontFamily:F_SANS }}>专属入场券</span>
-                                    <span style={{ position:'absolute', right:'16px', top:'13px', fontSize:'10px', fontStyle:'italic', color:'#fff', fontFamily:F_SANS }}>热爱印记</span>
+                                <div style={{ position:'absolute', top:0, left:0, right:0, height:'40px', backgroundColor:'#E60012' }}>
+                                    <div style={{ position:'absolute', top:'12px', left:'16px', fontSize:'12px', fontWeight:900, color:'#fff', fontFamily:F_SANS, lineHeight:'16px' }}>专属入场券</div>
+                                    <div style={{ position:'absolute', top:'13px', right:'16px', fontSize:'10px', fontStyle:'italic', color:'#fff', fontFamily:F_SANS, lineHeight:'14px' }}>热爱印记</div>
                                 </div>
                                 
                                 {/* 中间内容 */}
                                 <div style={{ position:'absolute', top:'60px', left:'20px', right:'20px' }}>
-                                    <div style={{ fontSize:'14px', color:'#E60012', fontWeight:900, fontFamily:F_SERIF, wordBreak:'break-word', whiteSpace:'pre-wrap', marginBottom:'8px' }}>{eventInfo}</div>
-                                    <div style={{ marginBottom:'16px' }}>
-                                        <span style={{ fontSize:'36px', color:'#fff', fontWeight:900, fontFamily:F_SERIF, marginRight:'12px' }}>{athlete}</span>
-                                        <span style={{ fontSize:'20px', color:'rgba(255,255,255,0.8)', fontWeight:900, fontStyle:'italic', fontFamily:F_SANS }}>{score}</span>
+                                    <div style={{ display:'block', width:'100%', paddingBottom:'8px' }}>
+                                        <div style={{ display:'block', fontSize:'14px', color:'#E60012', fontWeight:900, fontFamily:F_SERIF, lineHeight:'14px', wordBreak:'break-word', whiteSpace:'pre-wrap' }}>{eventInfo}</div>
                                     </div>
-                                    <div style={{ fontSize:'13px', color:'#d1d5db', wordBreak:'break-all', whiteSpace:'pre-wrap', fontFamily:F_SERIF, letterSpacing:'0.05em', lineHeight:1.6 }}>"{quote}"</div>
+                                    <div style={{ display:'block', width:'100%', paddingBottom:'20px' }}>
+                                        <div style={{ display:'block', whiteSpace:'nowrap', fontSize:0, lineHeight:0 }}>
+                                            <span style={{ display:'inline-block', fontSize:'36px', color:'#fff', fontWeight:900, fontFamily:F_SERIF, lineHeight:'36px', verticalAlign:'bottom' }}>{athlete}</span>
+                                            <span style={{ display:'inline-block', width:'12px', height:'1px' }}></span>
+                                            <span style={{ display:'inline-block', fontSize:'20px', color:'rgba(255,255,255,0.8)', fontWeight:900, fontStyle:'italic', fontFamily:F_SANS, lineHeight:'20px', verticalAlign:'bottom' }}>{score}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display:'block', width:'100%' }}>
+                                        <div style={{ display:'block', fontSize:'13px', color:'#d1d5db', wordBreak:'break-all', whiteSpace:'pre-wrap', fontFamily:F_SERIF, letterSpacing:'0.05em', lineHeight:'22px' }}>"{quote}"</div>
+                                    </div>
                                 </div>
                                 
                                 {/* 底部白条 */}
-                                <div style={{ position:'absolute', bottom:0, left:0, right:0, backgroundColor:'#fff', color:'#000', padding:'16px', boxSizing:'border-box' }}>
-                                    <div style={{ overflow:'hidden', marginBottom:'12px' }}>
-                                        <div style={{ float:'left' }}>
-                                            <div style={{ fontSize:'10px', fontWeight:900, textTransform:'uppercase', letterSpacing:'0.1em', color:'#6b7280', fontFamily:F_SANS }}>专属 ID</div>
-                                            <div style={{ fontSize:'14px', fontWeight:900, textTransform:'uppercase', fontFamily:F_SERIF, marginTop:'2px' }}>@{displayUserName}</div>
+                                <div style={{ position:'absolute', bottom:0, left:0, right:0, backgroundColor:'#fff', color:'#000', padding:'16px', boxSizing:'border-box', height:'106px' }}>
+                                    <div style={{ position:'relative', height:'32px', marginBottom:'12px' }}>
+                                        <div style={{ position:'absolute', left:0, bottom:0 }}>
+                                            <div style={{ fontSize:'10px', fontWeight:900, textTransform:'uppercase', letterSpacing:'0.1em', color:'#6b7280', fontFamily:F_SANS, lineHeight:'10px', marginBottom:'4px' }}>专属 ID</div>
+                                            <div style={{ fontSize:'14px', fontWeight:900, textTransform:'uppercase', fontFamily:F_SERIF, lineHeight:'14px' }}>@{displayUserName}</div>
                                         </div>
-                                        <div style={{ float:'right', textAlign:'right' }}>
-                                            <div style={{ fontSize:'10px', fontWeight:900, textTransform:'uppercase', letterSpacing:'0.1em', color:'#E60012', fontFamily:F_SANS }}>观赛坐标</div>
-                                            <div style={{ fontSize:'12px', fontWeight:900, fontFamily:F_SANS, marginTop:'2px' }}>[ 坐标 ] {location}</div>
+                                        <div style={{ position:'absolute', right:0, bottom:0, textAlign:'right' }}>
+                                            <div style={{ fontSize:'10px', fontWeight:900, textTransform:'uppercase', letterSpacing:'0.1em', color:'#E60012', fontFamily:F_SANS, lineHeight:'10px', marginBottom:'4px' }}>观赛坐标</div>
+                                            <div style={{ fontSize:'12px', fontWeight:900, fontFamily:F_SANS, lineHeight:'12px' }}>[ 坐标 ] {location}</div>
                                         </div>
                                     </div>
-                                    <div style={{ overflow:'hidden', height:'24px', marginBottom:'12px', whiteSpace:'nowrap' }}>
+                                    <div style={{ height:'24px', marginBottom:'10px', whiteSpace:'nowrap', overflow:'hidden', fontSize:0 }}>
                                         {BARCODE_WIDTHS.map((w,i) => (<span key={i} style={{ display:'inline-block', backgroundColor:'#000', width:`${w}px`, height:'24px', marginRight:'4px', opacity:0.6, verticalAlign:'top' }}></span>))}
                                     </div>
-                                    <div style={{ textAlign:'center', fontSize:'12px', fontWeight:900, letterSpacing:'0.4em', fontFamily:F_SANS }}>NO.{fanNo}</div>
+                                    <div style={{ textAlign:'center', fontSize:'12px', fontWeight:900, letterSpacing:'0.4em', fontFamily:F_SANS, lineHeight:'12px' }}>NO.{fanNo}</div>
                                 </div>
                             </div>
                         </>
@@ -242,26 +272,33 @@
                     {/* ==================== POLAROID ==================== */}
                     {template === 'polaroid' && (
                         <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',zIndex:20, backgroundColor:'#f5f5dc', padding:'24px', boxSizing:'border-box' }}>
-                            <div style={{ position:'absolute', top:'24px', left:'24px', right:'24px', bottom:'180px', backgroundColor:'#000', overflow:'hidden', boxShadow:'inset 0 0 20px rgba(0,0,0,0.8)' }}>
+                            <div style={{ position:'absolute', top:'24px', left:'24px', right:'24px', bottom:'150px', backgroundColor:'#000', overflow:'hidden', boxShadow:'inset 0 0 20px rgba(0,0,0,0.8)' }}>
                                 {renderBg('filter-polaroid')}
                             </div>
                             <div style={{ position:'absolute', bottom:'24px', left:'24px', right:'24px' }}>
-                                <div style={{ color:'#333', fontSize:'13px', fontWeight:900, letterSpacing:'0.05em', fontFamily:F_SERIF }}>
-                                    <div style={{ wordBreak:'break-word', whiteSpace:'pre-wrap', marginBottom:'6px' }}>{eventInfo}</div>
-                                    <div style={{ marginBottom:'12px' }}>
-                                        <span style={{ fontSize:'16px', marginRight:'8px' }}>{athlete}</span>
-                                        <span style={{ fontSize:'14px' }}>{score}</span>
+                                <div style={{ display:'block', width:'100%', color:'#333', fontSize:'13px', fontWeight:900, letterSpacing:'0.05em', fontFamily:F_SERIF }}>
+                                    <div style={{ display:'block', paddingBottom:'6px' }}>
+                                        <div style={{ display:'block', lineHeight:'14px', fontSize:'14px', wordBreak:'break-word', whiteSpace:'pre-wrap' }}>{eventInfo}</div>
                                     </div>
-                                    <div style={{ color:'#666', fontWeight:400, fontStyle:'italic', fontFamily:F_SERIF, lineHeight:1.6, marginBottom:'12px' }}>"{quote}"</div>
+                                    <div style={{ display:'block', paddingBottom:'10px' }}>
+                                        <div style={{ display:'block', fontSize:0, lineHeight:0, whiteSpace:'nowrap' }}>
+                                            <span style={{ display:'inline-block', fontSize:'16px', lineHeight:'16px', verticalAlign:'bottom' }}>{athlete}</span>
+                                            <span style={{ display:'inline-block', width:'8px', height:'1px' }}></span>
+                                            <span style={{ display:'inline-block', fontSize:'14px', lineHeight:'14px', verticalAlign:'bottom' }}>{score}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display:'block', paddingBottom:'12px' }}>
+                                        <div style={{ display:'block', color:'#666', fontWeight:400, fontStyle:'italic', fontFamily:F_SERIF, lineHeight:'20px', wordBreak:'break-all', whiteSpace:'pre-wrap' }}>"{quote}"</div>
+                                    </div>
                                 </div>
-                                <div style={{ borderTop:'1px solid #ccc', paddingTop:'12px', overflow:'hidden' }}>
-                                    <div style={{ float:'left' }}>
-                                        <div style={{ color:'#888', fontSize:'10px', letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:F_SANS }}>记忆坐标</div>
-                                        <div style={{ color:'#333', fontSize:'12px', fontWeight:900, fontFamily:F_SANS, marginTop:'2px' }}>[ 坐标 ] {location}</div>
+                                <div style={{ position:'relative', borderTop:'1px solid #ccc', paddingTop:'12px', height:'40px', boxSizing:'border-box', width:'100%' }}>
+                                    <div style={{ position:'absolute', top:'12px', left:0 }}>
+                                        <div style={{ color:'#888', fontSize:'10px', letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:F_SANS, lineHeight:'10px', marginBottom:'4px' }}>记忆坐标</div>
+                                        <div style={{ color:'#333', fontSize:'12px', fontWeight:900, fontFamily:F_SANS, lineHeight:'12px' }}>[ 坐标 ] {location}</div>
                                     </div>
-                                    <div style={{ float:'right', textAlign:'right' }}>
-                                        <div style={{ color:'#888', fontSize:'10px', letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:F_SANS }}>专属见证</div>
-                                        <div style={{ color:'#d93a3a', fontSize:'16px', fontWeight:900, fontFamily:F_SERIF, marginTop:'2px' }}>@{displayUserName}</div>
+                                    <div style={{ position:'absolute', top:'12px', right:0, textAlign:'right' }}>
+                                        <div style={{ color:'#888', fontSize:'10px', letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:F_SANS, lineHeight:'10px', marginBottom:'4px' }}>专属见证</div>
+                                        <div style={{ color:'#d93a3a', fontSize:'16px', fontWeight:900, fontFamily:F_SERIF, lineHeight:'16px' }}>@{displayUserName}</div>
                                     </div>
                                 </div>
                             </div>
