@@ -30,7 +30,9 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <!-- ========== 核心降维打击：用 snapdom 替换 html2canvas ========== -->
+    <script src="https://cdn.jsdelivr.net/npm/@zumer/snapdom/dist/snapdom.min.js"></script>
 
     <style>
         body { background-color: #050505; color: white; -webkit-tap-highlight-color: transparent; }
@@ -104,7 +106,7 @@
                 <div ref={ref} style={{ position: 'relative', overflow: 'hidden', background: '#000', width: '420px', height: '560px', WebkitTextSizeAdjust: '100%', textSizeAdjust: '100%', isolation: 'isolate' }}>
                     <div className="noise-bg" style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', zIndex: 5 }}></div>
                     
-                    {/* ==================== 1 & 2: HONOR & BIRTHDAY (核心重灾区修复) ==================== */}
+                    {/* ==================== 1 & 2: HONOR & BIRTHDAY ==================== */}
                     {(template === 'honor' || template === 'birthday') && (
                         <>
                             {renderBg(template === 'birthday' ? 'filter-birthday' : 'filter-honor')}
@@ -115,23 +117,19 @@
                             </div>
 
                             <div style={{ position: 'absolute', bottom: '150px', left: '24px', right: '24px', zIndex: 20 }}>
-                                {/* 赛事行：物理高度锁定 */}
                                 <div style={{ height: '24px', marginBottom: '8px', overflow: 'hidden' }}>
                                     <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: '24px' }}>{eventInfo}</div>
                                 </div>
-                                {/* 选手行：物理高度锁定 55px，防止下一行语录钻进来 */}
                                 <div style={{ height: '55px', marginBottom: '12px', overflow: 'visible', whiteSpace: 'nowrap' }}>
                                     <span style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: '55px', verticalAlign: 'bottom' }}>{athlete}</span>
                                     <span style={{ display: 'inline-block', width: '12px' }}></span>
                                     <span style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: F_SANS, lineHeight: '45px', verticalAlign: 'bottom' }}>{score}</span>
                                 </div>
-                                {/* 语录行：带左边框隔离 */}
                                 <div style={{ borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px' }}>
                                     <div style={{ fontSize: '13px', lineHeight: '1.6', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-all', fontFamily: F_SERIF, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>"{quote}"</div>
                                 </div>
                             </div>
 
-                            {/* 底部信息卡 */}
                             <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px', height: '116px', backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', zIndex: 20 }}>
                                 <div style={{ position: 'absolute', left: '16px', top: '24px', fontSize: '9px', color: '#6b7280', fontWeight: 700, fontFamily: F_SANS }}>现场见证人</div>
                                 <div style={{ position: 'absolute', left: '16px', top: '42px', fontSize: '18px', color: '#fff', fontWeight: 700, fontFamily: F_SERIF }}>@{displayUserName}</div>
@@ -141,7 +139,7 @@
                         </>
                     )}
 
-                    {/* ==================== 3: CHEER (出征祈福) ==================== */}
+                    {/* ==================== 3: CHEER ==================== */}
                     {template === 'cheer' && (
                         <>
                             {renderBg('filter-cheer')}
@@ -169,7 +167,7 @@
                         </>
                     )}
 
-                    {/* ==================== 4: TICKET (票根) ==================== */}
+                    {/* ==================== 4: TICKET ==================== */}
                     {template === 'ticket' && (
                         <>
                             {renderBg('filter-ticket')}
@@ -201,7 +199,7 @@
                         </>
                     )}
 
-                    {/* ==================== 5: POLAROID (陪伴日记) ==================== */}
+                    {/* ==================== 5: POLAROID ==================== */}
                     {template === 'polaroid' && (
                         <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',zIndex:20,backgroundColor:'#f5f5dc',padding:'24px',boxSizing:'border-box' }}>
                             <div style={{ width:'372px',height:'340px',background:'#000',overflow:'hidden',boxShadow:'inset 0 0 20px rgba(0,0,0,0.8)' }}>
@@ -295,6 +293,7 @@
 
             const handleImageUpload = (e) => { const f=e.target.files[0]; if(f){const r=new FileReader();r.onload=(e)=>setImage(e.target.result);r.readAsDataURL(f);} };
 
+            /* ========== 核心改动：用 snapdom 替换 html2canvas ========== */
             const handleDownload = async () => {
                 if (!printRef.current) return;
                 setIsGenerating(true);
@@ -303,12 +302,16 @@
                     try { if(document.fonts&&document.fonts.ready) await Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1500))]); } catch(e){}
                     void printRef.current.offsetHeight;
                     await new Promise(r => setTimeout(r, 400));
-                    const canvas = await html2canvas(printRef.current, {
-                        scale: 3, useCORS: true, backgroundColor: '#050505',
-                        width: POSTER_WIDTH, height: POSTER_HEIGHT,
-                        windowWidth: POSTER_WIDTH, windowHeight: POSTER_HEIGHT,
+                    
+                    /* * snapdom 核心：它直接利用浏览器的原生渲染机制（SVG foreignObject）
+                     * 彻底规避了旧版 js 引擎算错 CSS（比如 Flexbox 和 行高塌陷）的问题。
+                     * 预览时是对的，截图就 100% 是对的！
+                     */
+                    const blob = await snapdom.toBlob(printRef.current, {
+                        scale: 3, 
+                        embedFonts: true
                     });
-                    const blob = await new Promise((res,rej) => { canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob null')), 'image/png'); });
+                    
                     const url = URL.createObjectURL(blob);
                     resultBlobUrlRef.current = url;
                     setResultImage(url);
@@ -334,6 +337,7 @@
                             <div className="w-7 h-7 rounded bg-brand-red flex items-center justify-center"><Icon name="award" className="w-4 h-4 text-white" /></div>
                             <h1 className="text-lg font-black tracking-widest text-white italic uppercase font-sans">Match Moment</h1>
                         </div>
+                        <div className="text-[10px] text-gray-500 font-bold border border-gray-800 px-2 py-1 rounded" style={{fontFamily:F_SANS}}>获取更多应援模板</div>
                     </div>
 
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
@@ -350,7 +354,7 @@
                         {!image && (
                             <label className="absolute top-[80px] left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center justify-center cursor-pointer bg-black/60 backdrop-blur-sm group p-10 rounded-xl" style={{width:`${POSTER_WIDTH*scale}px`,height:`${POSTER_HEIGHT*scale}px`}}>
                                 <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Icon name="image-plus" className="w-8 h-8 text-white" /></div>
-                                <span className="text-white text-sm font-bold tracking-widest drop-shadow-md">点击上传照片</span>
+                                <span className="text-white text-sm font-bold tracking-widest drop-shadow-md" style={{fontFamily:F_SANS}}>点击上传照片，应用此排版</span>
                                 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                             </label>
                         )}
@@ -363,7 +367,7 @@
 
                         <div className="bg-brand-panel p-5 rounded-2xl border border-white/5 space-y-5">
                              <div className="space-y-2">
-                                <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Scene / 核心场景</label>
+                                <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase" style={{fontFamily:F_SANS}}>Scene / 核心场景</label>
                                 <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
                                     {[{id:'honor',label:'荣耀见证',icon:'award'},{id:'birthday',label:'生日限定',icon:'cake'},{id:'cheer',label:'出征祈福',icon:'flame'},{id:'ticket',label:'入场确认',icon:'ticket'},{id:'polaroid',label:'陪伴日记',icon:'book-open'}].map(t=>(
                                         <button key={t.id} onClick={()=>setTemplate(t.id)} className={`flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all border shrink-0 min-w-[72px] ${template===t.id?'bg-brand-red border-brand-red text-white shadow-lg':'bg-white/5 border-white/10 text-gray-500'}`}>
@@ -389,20 +393,20 @@
                             </div>
                         </div>
 
-                        <button onClick={handleDownload} disabled={!image||isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl ${!image?'bg-gray-800 text-gray-600':'bg-brand-red text-white active:scale-95'}`}>
+                        <button onClick={handleDownload} disabled={!image||isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl ${!image?'bg-gray-800 text-gray-600':'bg-brand-red text-white active:scale-95'}`} style={{fontFamily:F_SANS}}>
                             {isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 生成专属海报</>}
                         </button>
                     </div>
 
                     {resultImage && (
-                        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in">
+                        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in" style={{fontFamily:F_SANS}}>
                             <div className="w-full max-w-sm flex flex-col items-center">
-                                {isWechat()&&(<div className="w-full bg-green-900/80 border border-green-500/30 rounded-xl px-4 py-3 mb-4 flex items-center gap-3"><span className="text-green-400 text-lg flex-shrink-0">💡</span><span className="text-green-200 text-xs font-bold">微信内请「长按海报」选择保存图片</span></div>)}
-                                <img src={resultImage} alt="专属海报" className="w-full rounded-xl shadow-2xl mb-6" style={{ pointerEvents:'auto' }} />
-                                <button onClick={triggerActualDownload} className="w-full bg-brand-red text-white px-6 py-3.5 rounded-full font-black text-lg mb-3 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                                {isWechat()&&(<div className="w-full bg-green-900/80 border border-green-500/30 rounded-xl px-4 py-3 mb-4 flex items-center gap-3"><span className="text-green-400 text-lg flex-shrink-0">💡</span><span className="text-green-200 text-xs font-bold leading-relaxed">微信内请<span className="text-green-400">「长按海报」</span>选择保存图片</span></div>)}
+                                <img src={resultImage} alt="专属海报" className="w-full rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] mb-6" style={{ pointerEvents:'auto', WebkitTouchCallout:'default', userSelect:'auto', WebkitUserSelect:'auto', display:'block' }} />
+                                <button onClick={triggerActualDownload} className="w-full bg-brand-red hover:bg-red-700 text-white px-6 py-3.5 rounded-full font-black text-lg mb-3 shadow-[0_0_20px_rgba(230,0,18,0.4)] flex items-center justify-center gap-2 transition-transform active:scale-95">
                                     <Icon name="download" className="w-5 h-5" />{isWechat()?'长按上方海报保存':'点击保存相册'}
                                 </button>
-                                <button onClick={() => { if(resultBlobUrlRef.current) URL.revokeObjectURL(resultBlobUrlRef.current); setResultImage(null); }} className="text-gray-500 text-sm border-b border-gray-600 pb-1 hover:text-white transition-colors font-bold">返回修改</button>
+                                <button onClick={() => { if(resultBlobUrlRef.current) { URL.revokeObjectURL(resultBlobUrlRef.current); resultBlobUrlRef.current=null; } setResultImage(null); }} className="text-gray-500 text-sm border-b border-gray-600 pb-1 hover:text-white transition-colors font-bold">返回修改</button>
                             </div>
                         </div>
                     )}
