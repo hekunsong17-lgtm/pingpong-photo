@@ -31,8 +31,8 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- ========== 核心降维打击：用 snapdom 替换 html2canvas ========== -->
-    <script src="https://cdn.jsdelivr.net/npm/@zumer/snapdom/dist/snapdom.min.js"></script>
+    <!-- 换回 html2canvas，准备进行最严苛的物理排版防御 -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
         body { background-color: #050505; color: white; -webkit-tap-highlight-color: transparent; }
@@ -51,11 +51,20 @@
         }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        /* * 核心修复：确保在视口内渲染但不可见，强制微信WebView完整计算排版 
+         * will-change: transform 强制 GPU 参与合成
+         */
         .offscreen-render-target {
-            position: fixed !important; top: 0 !important; left: 0 !important;
-            width: 420px !important; height: 560px !important;
-            z-index: -100 !important; opacity: 0 !important;
-            pointer-events: none !important; overflow: hidden !important;
+            position: fixed !important; 
+            top: 0 !important; 
+            left: 0 !important;
+            width: 420px !important; 
+            height: 560px !important;
+            z-index: -100 !important; 
+            opacity: 0 !important;
+            pointer-events: none !important; 
+            overflow: hidden !important;
             will-change: transform;
         }
     </style>
@@ -69,7 +78,7 @@
         const POSTER_WIDTH = 420;
         const POSTER_HEIGHT = 560;
         const F_SERIF = '"Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
-        const F_SANS = '"Noto Sans SC", system-ui, -apple-system, sans-serif';
+        const F_SANS = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif';
         const BARCODE_WIDTHS = [1, 2, 1, 1, 2, 2, 1, 2, 1, 1, 1, 2, 2, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 2, 2, 1, 1, 2, 1, 2, 1, 2];
         const isWechat = () => /MicroMessenger/i.test(navigator.userAgent);
 
@@ -85,21 +94,29 @@
         };
 
         const CircularSeal = ({ colorClass, moodText, fanNo }) => (
-            <div className={`opacity-90 ${colorClass}`} style={{ width: '84px', height: '84px', mixBlendMode: 'screen', transform: 'rotate(-6deg)' }}>
+            <div className={colorClass} style={{ opacity: 0.9, width: '84px', height: '84px', mixBlendMode: 'screen', transform: 'rotate(-6deg)' }}>
                 <svg viewBox="0 0 100 100" width="84" height="84" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
                     <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeWidth="2.5" />
                     <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
-                    <text x="50" y="34" textAnchor="middle" fill="currentColor" fontSize="16" fontWeight="bold" fontFamily={F_SERIF} letterSpacing="0.1em">{moodText}</text>
-                    <text x="50" y="55" textAnchor="middle" fill="currentColor" fontSize="16" fontWeight="bold" fontFamily={F_SERIF} letterSpacing="0.1em">编号</text>
-                    <text x="50" y="76" textAnchor="middle" fill="currentColor" fontSize="16" fontWeight="bold" fontFamily={F_SANS} letterSpacing="0.05em">{fanNo}</text>
+                    <text x="50" y="34" textAnchor="middle" fill="currentColor" fontSize="16px" fontWeight="bold" fontFamily={F_SERIF} letterSpacing="0.1em">{moodText}</text>
+                    <text x="50" y="55" textAnchor="middle" fill="currentColor" fontSize="16px" fontWeight="bold" fontFamily={F_SERIF} letterSpacing="0.1em">编号</text>
+                    <text x="50" y="76" textAnchor="middle" fill="currentColor" fontSize="16px" fontWeight="bold" fontFamily={F_SANS} letterSpacing="0.05em">{fanNo}</text>
                 </svg>
             </div>
         );
 
+        /*
+         * ========== V8 核弹级物理排版重构 ==========
+         * - 彻底干掉 flexbox、gap、baseline
+         * - 每一个区块都用 absolute + 像素写死 bottom 锚定
+         * - 内部行距完全依靠 <div style={{height: '8px'}}>&nbsp;</div> 实体垫片支撑
+         * - 左右对齐采用最原始的 float: left / float: right 机制
+         * - 所有文本行高精确到绝对 px，不使用比率
+         */
         const Poster = forwardRef(({ template, image, athlete, eventInfo, score, quote, displayUserName, location, stampMood, fanNo }, ref) => {
             const renderBg = (fc) => {
                 if (image) return <img src={image} style={{ width: '420px', height: '560px', objectFit: 'cover', position: 'absolute', top: 0, left: 0, display: 'block' }} className={fc} crossOrigin="anonymous" />;
-                return <div className={fc} style={{ width: '420px', height: '560px', position: 'absolute', top: 0, left: 0, background: '#111', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
+                return <div className={fc} style={{ width: '420px', height: '560px', position: 'absolute', top: 0, left: 0, background: '#111', textAlign: 'center', lineHeight: '560px' }}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
             };
 
             return (
@@ -111,30 +128,44 @@
                         <>
                             {renderBg(template === 'birthday' ? 'filter-birthday' : 'filter-honor')}
                             <div style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', zIndex: 10, background: template === 'birthday' ? 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(255,183,197,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
+                            
                             <div style={{ position: 'absolute', top: '24px', right: '24px', textAlign: 'right', zIndex: 20 }}>
-                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#E0E0E0', fontFamily: F_SANS, lineHeight: '14px' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
-                                <div style={{ fontSize: '12px', fontWeight: 900, fontStyle: 'italic', fontFamily: F_SANS, color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', lineHeight: '20px' }}>热爱印记</div>
+                                <div style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: '#E0E0E0', fontFamily: F_SANS, lineHeight: '14px' }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
+                                <div style={{ height: '2px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                <div style={{ display: 'block', fontSize: '12px', fontWeight: 900, fontStyle: 'italic', fontFamily: F_SANS, color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', lineHeight: '20px' }}>热爱印记</div>
                             </div>
 
-                            <div style={{ position: 'absolute', bottom: '150px', left: '24px', right: '24px', zIndex: 20 }}>
-                                <div style={{ height: '24px', marginBottom: '8px', overflow: 'hidden' }}>
-                                    <div style={{ fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: '24px' }}>{eventInfo}</div>
+                            {/* 锚定在底部信息卡上方，自下向上堆叠 */}
+                            <div style={{ position: 'absolute', bottom: '156px', left: '24px', right: '24px', zIndex: 20 }}>
+                                <div style={{ display: 'block', fontSize: '14px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: '20px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                                    {eventInfo}
                                 </div>
-                                <div style={{ height: '55px', marginBottom: '12px', overflow: 'visible', whiteSpace: 'nowrap' }}>
-                                    <span style={{ fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: '55px', verticalAlign: 'bottom' }}>{athlete}</span>
-                                    <span style={{ display: 'inline-block', width: '12px' }}></span>
-                                    <span style={{ fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: F_SANS, lineHeight: '45px', verticalAlign: 'bottom' }}>{score}</span>
+                                <div style={{ height: '8px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                
+                                {/* 运动员+成绩：采用 inline-block 而非 flex */}
+                                <div style={{ display: 'block', whiteSpace: 'nowrap' }}>
+                                    <span style={{ display: 'inline-block', fontSize: '44px', color: '#fff', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontFamily: F_SERIF, lineHeight: '44px', verticalAlign: 'bottom' }}>{athlete}</span>
+                                    <span style={{ display: 'inline-block', width: '12px', height: '1px' }}></span>
+                                    <span style={{ display: 'inline-block', fontSize: '30px', fontWeight: 900, fontStyle: 'italic', textShadow: '0 2px 4px rgba(0,0,0,0.8)', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontFamily: F_SANS, lineHeight: '30px', verticalAlign: 'bottom' }}>{score}</span>
                                 </div>
-                                <div style={{ borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px' }}>
-                                    <div style={{ fontSize: '13px', lineHeight: '1.6', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-all', fontFamily: F_SERIF, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>"{quote}"</div>
+                                <div style={{ height: '12px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                
+                                <div style={{ display: 'block', fontSize: '13px', lineHeight: '21px', borderLeft: `2px solid ${template === 'birthday' ? '#FFB7C5' : '#D4AF37'}`, paddingLeft: '12px', color: template === 'birthday' ? '#ffe4e6' : '#d1d5db', wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+                                    "{quote}"
                                 </div>
                             </div>
 
                             <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px', height: '116px', backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', zIndex: 20 }}>
-                                <div style={{ position: 'absolute', left: '16px', top: '24px', fontSize: '9px', color: '#6b7280', fontWeight: 700, fontFamily: F_SANS }}>现场见证人</div>
-                                <div style={{ position: 'absolute', left: '16px', top: '42px', fontSize: '18px', color: '#fff', fontWeight: 700, fontFamily: F_SERIF }}>@{displayUserName}</div>
-                                <div style={{ position: 'absolute', left: '16px', top: '78px', fontSize: '10px', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontWeight: 700, fontFamily: F_SANS }}>[ 坐标 ] {location}</div>
-                                <div style={{ position: 'absolute', right: '16px', top: '16px' }}><CircularSeal moodText={stampMood} fanNo={fanNo} colorClass="" /></div>
+                                <div style={{ position: 'absolute', left: '16px', top: '24px' }}>
+                                    <div style={{ display: 'block', fontSize: '9px', color: '#6b7280', fontWeight: 700, letterSpacing: '0.1em', fontFamily: F_SANS, lineHeight: '12px' }}>现场见证人</div>
+                                    <div style={{ height: '6px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                    <div style={{ display: 'block', fontSize: '18px', color: '#fff', fontWeight: 700, letterSpacing: '0.1em', fontFamily: F_SERIF, lineHeight: '22px' }}>@{displayUserName}</div>
+                                    <div style={{ height: '8px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                    <div style={{ display: 'block', fontSize: '10px', color: template === 'birthday' ? '#FFB7C5' : '#D4AF37', fontWeight: 700, letterSpacing: '0.1em', fontFamily: F_SANS, lineHeight: '14px' }}>[ 坐标 ] {location}</div>
+                                </div>
+                                <div style={{ position: 'absolute', right: '16px', top: '16px', width: '84px', height: '84px' }}>
+                                    <CircularSeal colorClass={template === 'birthday' ? 'text-brand-pink' : 'text-brand-gold'} moodText={stampMood} fanNo={fanNo} />
+                                </div>
                             </div>
                         </>
                     )}
@@ -143,26 +174,40 @@
                     {template === 'cheer' && (
                         <>
                             {renderBg('filter-cheer')}
-                            <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',zIndex:10, background:'linear-gradient(to top, rgba(69,10,10,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
-                            <div style={{ position:'absolute',top:'32px',left:'24px',fontSize:'72px',color:'#E60012',fontWeight:900,fontStyle:'italic',opacity:0.2,transform:'rotate(-6deg)',fontFamily:F_SERIF,zIndex:20,lineHeight:'72px' }}>战</div>
-                            <div style={{ position:'absolute',top:'24px',right:'24px',textAlign:'right',zIndex:20 }}>
-                                <div style={{ fontSize:'10px',color:'#fff',fontFamily:F_SANS,fontWeight:700 }}>出征祈福</div>
-                                <div style={{ fontSize:'12px',fontWeight:900,fontStyle:'italic',color:'#E60012',fontFamily:F_SANS }}>热爱印记</div>
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', zIndex: 10, background: 'linear-gradient(to top, rgba(69,10,10,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
+                            
+                            <div style={{ position: 'absolute', top: '32px', left: '24px', fontSize: '72px', color: '#E60012', fontWeight: 900, fontStyle: 'italic', opacity: 0.2, transform: 'rotate(-6deg)', fontFamily: F_SERIF, lineHeight: '72px', zIndex: 20 }}>战</div>
+                            
+                            <div style={{ position: 'absolute', top: '24px', right: '24px', textAlign: 'right', zIndex: 20 }}>
+                                <div style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: '#fff', fontFamily: F_SANS, lineHeight: '14px' }}>出征祈福</div>
+                                <div style={{ height: '2px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                <div style={{ display: 'block', fontSize: '12px', fontWeight: 900, fontStyle: 'italic', color: '#E60012', fontFamily: F_SANS, lineHeight: '16px' }}>热爱印记</div>
                             </div>
-                            <div style={{ position:'absolute',bottom:'160px',left:'24px',right:'24px',zIndex:20 }}>
-                                <div style={{ fontSize:'10px',color:'#fff',fontWeight:900,letterSpacing:'0.2em',fontFamily:F_SANS,marginBottom:'8px' }}>--- 夺冠之路 ---</div>
-                                <div style={{ fontSize:'14px',color:'#f87171',fontWeight:900,fontFamily:F_SERIF,marginBottom:'8px' }}>{eventInfo}</div>
-                                <div style={{ height:'50px', whiteSpace:'nowrap', marginBottom:'16px' }}>
-                                    <span style={{ fontSize:'44px',color:'#fff',fontWeight:900,fontFamily:F_SERIF,lineHeight:'50px' }}>{athlete}</span>
-                                    <span style={{ display:'inline-block',background:'#E60012',color:'#fff',padding:'2px 8px',marginLeft:'12px',fontSize:'24px',fontWeight:900,transform:'skewX(-12deg)',fontFamily:F_SANS,verticalAlign:'middle' }}>{score}</span>
+
+                            <div style={{ position: 'absolute', bottom: '60px', left: '24px', right: '24px', zIndex: 20 }}>
+                                <div style={{ display: 'block' }}>
+                                    <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#E60012', borderRadius: '50%', boxShadow: '0 0 8px rgba(230,0,18,0.8)', verticalAlign: 'middle' }}></span>
+                                    <span style={{ display: 'inline-block', width: '8px', height: '1px' }}></span>
+                                    <span style={{ display: 'inline-block', fontSize: '10px', color: '#fff', fontWeight: 900, letterSpacing: '0.3em', fontFamily: F_SANS, lineHeight: '14px', verticalAlign: 'middle' }}>夺冠之路</span>
                                 </div>
-                                <div style={{ background:'rgba(255,255,255,0.1)',borderLeft:'4px solid #E60012',padding:'12px' }}>
-                                    <div style={{ fontSize:'13px',color:'#fff',fontWeight:900,fontFamily:F_SERIF,lineHeight:'1.6',wordBreak:'break-all' }}>"{quote}"</div>
+                                <div style={{ height: '8px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                <div style={{ display: 'block', fontSize: '14px', color: '#f87171', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '20px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{eventInfo}</div>
+                                <div style={{ height: '6px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                <div style={{ display: 'block', whiteSpace: 'nowrap' }}>
+                                    <span style={{ display: 'inline-block', fontSize: '44px', color: '#fff', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '44px', verticalAlign: 'bottom' }}>{athlete}</span>
+                                    <span style={{ display: 'inline-block', width: '12px', height: '1px' }}></span>
+                                    <span style={{ display: 'inline-block', fontSize: '24px', color: '#fff', backgroundColor: '#E60012', padding: '4px 8px', transform: 'skewX(-12deg)', fontWeight: 900, fontFamily: F_SANS, lineHeight: '28px', verticalAlign: 'bottom' }}>{score}</span>
+                                </div>
+                                <div style={{ height: '16px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                <div style={{ display: 'block', backgroundColor: 'rgba(255,255,255,0.1)', borderLeft: '4px solid #E60012', padding: '12px' }}>
+                                    <div style={{ display: 'block', fontSize: '13px', color: '#fff', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '21px', wordBreak: 'break-all', whiteSpace: 'pre-wrap', margin: 0 }}>"{quote}"</div>
                                 </div>
                             </div>
-                            <div style={{ position:'absolute',bottom:'24px',left:'24px',right:'24px',borderTop:'1px solid rgba(255,255,255,0.2)',paddingTop:'12px',zIndex:20 }}>
-                                <span style={{ float:'left',fontSize:'10px',color:'#ccc',fontFamily:F_SANS }}>祈福粉丝: @{displayUserName}</span>
-                                <span style={{ float:'right',fontSize:'10px',color:'#ccc',fontFamily:F_SANS }}>[ 坐标 ] {location}</span>
+                            
+                            <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px', zIndex: 20 }}>
+                                <div style={{ float: 'left', fontSize: '10px', color: '#e5e7eb', fontFamily: F_SANS, lineHeight: '14px' }}>祈福粉丝: @{displayUserName}</div>
+                                <div style={{ float: 'right', fontSize: '10px', color: '#e5e7eb', fontFamily: F_SANS, lineHeight: '14px' }}>[ 坐标 ] {location}</div>
+                                <div style={{ clear: 'both', height: 0, overflow: 'hidden' }}></div>
                             </div>
                         </>
                     )}
@@ -171,29 +216,45 @@
                     {template === 'ticket' && (
                         <>
                             {renderBg('filter-ticket')}
-                            <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',background:'rgba(0,0,0,0.6)',zIndex:10 }}></div>
-                            <div style={{ position:'absolute',top:'16px',left:'16px',width:'388px',height:'528px',border:'3px solid rgba(255,255,255,0.8)',zIndex:20 }}>
-                                <div style={{ height:'40px',backgroundColor:'#E60012',position:'relative' }}>
-                                    <span style={{ position:'absolute',left:'16px',top:'12px',fontSize:'12px',fontWeight:900,color:'#fff',fontFamily:F_SANS }}>专属入场券</span>
-                                    <span style={{ position:'absolute',right:'16px',top:'13px',fontSize:'10px',fontStyle:'italic',color:'#fff',fontFamily:F_SANS }}>热爱印记</span>
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', background: 'rgba(0,0,0,0.6)', zIndex: 10 }}></div>
+                            
+                            <div style={{ position: 'absolute', top: '16px', left: '16px', width: '388px', height: '528px', border: '3px solid rgba(255,255,255,0.8)', boxSizing: 'border-box', zIndex: 20 }}>
+                                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40px', backgroundColor: '#E60012' }}>
+                                    <div style={{ position: 'absolute', left: '16px', top: '12px', fontSize: '12px', fontWeight: 900, color: '#fff', fontFamily: F_SANS, lineHeight: '16px' }}>专属入场券</div>
+                                    <div style={{ position: 'absolute', right: '16px', top: '13px', fontSize: '10px', fontStyle: 'italic', color: '#fff', fontFamily: F_SANS, lineHeight: '14px' }}>热爱印记</div>
                                 </div>
-                                <div style={{ position:'absolute',top:'60px',left:'20px',right:'20px' }}>
-                                    <div style={{ fontSize:'14px',color:'#E60012',fontWeight:900,fontFamily:F_SERIF,marginBottom:'10px' }}>{eventInfo}</div>
-                                    <div style={{ height:'40px',whiteSpace:'nowrap',marginBottom:'20px' }}>
-                                        <span style={{ fontSize:'36px',color:'#fff',fontWeight:900,fontFamily:F_SERIF,lineHeight:'40px' }}>{athlete}</span>
-                                        <span style={{ fontSize:'20px',color:'rgba(255,255,255,0.8)',fontWeight:900,fontStyle:'italic',marginLeft:'12px' }}>{score}</span>
+                                
+                                <div style={{ position: 'absolute', top: '60px', left: '20px', right: '20px' }}>
+                                    <div style={{ display: 'block', fontSize: '14px', color: '#E60012', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '20px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{eventInfo}</div>
+                                    <div style={{ height: '8px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                    <div style={{ display: 'block', whiteSpace: 'nowrap' }}>
+                                        <span style={{ display: 'inline-block', fontSize: '36px', color: '#fff', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '36px', verticalAlign: 'bottom' }}>{athlete}</span>
+                                        <span style={{ display: 'inline-block', width: '12px', height: '1px' }}></span>
+                                        <span style={{ display: 'inline-block', fontSize: '20px', color: 'rgba(255,255,255,0.8)', fontWeight: 900, fontStyle: 'italic', fontFamily: F_SANS, lineHeight: '20px', verticalAlign: 'bottom' }}>{score}</span>
                                     </div>
-                                    <div style={{ fontSize:'13px',color:'#d1d5db',wordBreak:'break-all',fontFamily:F_SERIF,lineHeight:'1.6' }}>"{quote}"</div>
+                                    <div style={{ height: '16px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                    <div style={{ display: 'block', fontSize: '13px', color: '#d1d5db', wordBreak: 'break-all', whiteSpace: 'pre-wrap', fontFamily: F_SERIF, lineHeight: '21px' }}>"{quote}"</div>
                                 </div>
-                                <div style={{ position:'absolute',bottom:0,left:0,right:0,backgroundColor:'#fff',padding:'16px',height:'106px',color:'#000' }}>
-                                    <div style={{ overflow:'hidden',marginBottom:'10px' }}>
-                                        <div style={{ float:'left' }}><div style={{fontSize:'10px',color:'#6b7280',fontWeight:900}}>专属 ID</div><div style={{fontSize:'14px',fontWeight:900,fontFamily:F_SERIF}}>@{displayUserName}</div></div>
-                                        <div style={{ float:'right',textAlign:'right' }}><div style={{fontSize:'10px',color:'#E60012',fontWeight:900}}>观赛坐标</div><div style={{fontSize:'12px',fontWeight:900}}>[ 坐标 ] {location}</div></div>
+                                
+                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '106px', backgroundColor: '#fff', color: '#000', padding: '16px', boxSizing: 'border-box' }}>
+                                    <div>
+                                        <div style={{ float: 'left' }}>
+                                            <div style={{ display: 'block', fontSize: '10px', color: '#6b7280', fontWeight: 900, fontFamily: F_SANS, lineHeight: '14px' }}>专属 ID</div>
+                                            <div style={{ height: '2px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                            <div style={{ display: 'block', fontSize: '14px', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '18px' }}>@{displayUserName}</div>
+                                        </div>
+                                        <div style={{ float: 'right', textAlign: 'right' }}>
+                                            <div style={{ display: 'block', fontSize: '10px', color: '#E60012', fontWeight: 900, fontFamily: F_SANS, lineHeight: '14px' }}>观赛坐标</div>
+                                            <div style={{ height: '2px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                            <div style={{ display: 'block', fontSize: '12px', fontWeight: 900, fontFamily: F_SANS, lineHeight: '16px' }}>[ 坐标 ] {location}</div>
+                                        </div>
+                                        <div style={{ clear: 'both', height: '12px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
                                     </div>
-                                    <div style={{ height:'20px',whiteSpace:'nowrap',overflow:'hidden',fontSize:0,marginBottom:'8px' }}>
-                                        {BARCODE_WIDTHS.map((w,i)=>(<span key={i} style={{display:'inline-block',background:'#000',width:`${w}px`,height:'20px',marginRight:'4px',opacity:0.6}}></span>))}
+                                    <div style={{ height: '20px', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                                        {BARCODE_WIDTHS.map((w, i) => (<span key={i} style={{ display: 'inline-block', backgroundColor: '#000', width: `${w}px`, height: '20px', marginRight: '4px', opacity: 0.6, verticalAlign: 'top' }}></span>))}
                                     </div>
-                                    <div style={{textAlign:'center',fontSize:'12px',fontWeight:900,letterSpacing:'0.4em'}}>NO.{fanNo}</div>
+                                    <div style={{ height: '8px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                    <div style={{ display: 'block', textAlign: 'center', fontSize: '12px', fontWeight: 900, letterSpacing: '0.4em', fontFamily: F_SANS, lineHeight: '12px' }}>NO.{fanNo}</div>
                                 </div>
                             </div>
                         </>
@@ -201,18 +262,33 @@
 
                     {/* ==================== 5: POLAROID ==================== */}
                     {template === 'polaroid' && (
-                        <div style={{ position:'absolute',top:0,left:0,width:'420px',height:'560px',zIndex:20,backgroundColor:'#f5f5dc',padding:'24px',boxSizing:'border-box' }}>
-                            <div style={{ width:'372px',height:'340px',background:'#000',overflow:'hidden',boxShadow:'inset 0 0 20px rgba(0,0,0,0.8)' }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', zIndex: 20, backgroundColor: '#f5f5dc', padding: '24px', boxSizing: 'border-box' }}>
+                            <div style={{ position: 'absolute', top: '24px', left: '24px', right: '24px', bottom: '180px', backgroundColor: '#000', overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)' }}>
                                 {renderBg('filter-polaroid')}
                             </div>
-                            <div style={{ marginTop:'20px',color:'#333',fontFamily:F_SERIF }}>
-                                <div style={{fontSize:'14px',fontWeight:900,marginBottom:'4px'}}>{eventInfo}</div>
-                                <div style={{fontSize:'16px',fontWeight:900,marginBottom:'8px'}}>{athlete} {score}</div>
-                                <div style={{fontSize:'13px',fontWeight:400,fontStyle:'italic',color:'#666',lineHeight:'1.5'}}>"{quote}"</div>
+                            <div style={{ position: 'absolute', bottom: '80px', left: '24px', right: '24px' }}>
+                                <div style={{ display: 'block', fontSize: '14px', color: '#333', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '20px', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{eventInfo}</div>
+                                <div style={{ height: '6px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                <div style={{ display: 'block', whiteSpace: 'nowrap' }}>
+                                    <span style={{ display: 'inline-block', fontSize: '16px', color: '#333', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '16px', verticalAlign: 'bottom' }}>{athlete}</span>
+                                    <span style={{ display: 'inline-block', width: '8px', height: '1px' }}></span>
+                                    <span style={{ display: 'inline-block', fontSize: '14px', color: '#333', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '14px', verticalAlign: 'bottom' }}>{score}</span>
+                                </div>
+                                <div style={{ height: '6px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                <div style={{ display: 'block', color: '#666', fontSize: '13px', fontWeight: 400, fontStyle: 'italic', fontFamily: F_SERIF, lineHeight: '21px', wordBreak: 'break-all' }}>"{quote}"</div>
                             </div>
-                            <div style={{ position:'absolute',bottom:'24px',left:'24px',right:'24px',borderTop:'1px solid #ccc',paddingTop:'12px',overflow:'hidden' }}>
-                                <div style={{float:'left'}}><div style={{color:'#888',fontSize:'10px'}}>记忆坐标</div><div style={{color:'#333',fontSize:'12px',fontWeight:900}}>[ 坐标 ] {location}</div></div>
-                                <div style={{float:'right',textAlign:'right'}}><div style={{color:'#888',fontSize:'10px'}}>专属见证</div><div style={{color:'#d93a3a',fontSize:'16px',fontWeight:900,fontFamily:F_SERIF}}>@{displayUserName}</div></div>
+                            <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px', borderTop: '1px solid #ccc', paddingTop: '12px' }}>
+                                <div style={{ float: 'left' }}>
+                                    <div style={{ display: 'block', color: '#888', fontSize: '10px', fontFamily: F_SANS, lineHeight: '14px' }}>记忆坐标</div>
+                                    <div style={{ height: '2px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                    <div style={{ display: 'block', color: '#333', fontSize: '12px', fontWeight: 900, fontFamily: F_SANS, lineHeight: '16px' }}>[ 坐标 ] {location}</div>
+                                </div>
+                                <div style={{ float: 'right', textAlign: 'right' }}>
+                                    <div style={{ display: 'block', color: '#888', fontSize: '10px', fontFamily: F_SANS, lineHeight: '14px' }}>专属见证</div>
+                                    <div style={{ height: '2px', fontSize: 0, lineHeight: 0 }}>&nbsp;</div>
+                                    <div style={{ display: 'block', color: '#d93a3a', fontSize: '16px', fontWeight: 900, fontFamily: F_SERIF, lineHeight: '20px' }}>@{displayUserName}</div>
+                                </div>
+                                <div style={{ clear: 'both', height: 0, overflow: 'hidden' }}></div>
                             </div>
                         </div>
                     )}
@@ -220,37 +296,59 @@
             );
         });
 
-        const FAN_QUOTES = ["无论巅峰低谷，我在，我们都在。","你只管在赛场上赢，我们在台下为你撑腰。","见证你的时代，是我作为球迷最大的荣幸。","踏平坎坷成大道，祝凯旋！","生日快乐！愿你岁岁平安，永远赤诚。","抢票成功！终于可以去现场看你发光了！","哪怕万人阻挡，也要光芒万丈。","你永远可以相信中国乒乓球队！","大心脏！这哪里是在打球，是在打我的命！","只要心怀热爱，永远都是当打之年。","让二追三，逆风翻盘，这就是竞技体育的魅力！","赢了一起狂，输了一起扛。","看你打球，就像在看一场惊心动魄的艺术展。","请继续在你的热爱里闪闪发光吧！"];
-        const STAMP_MOODS = ["见证","荣耀","专属","热爱","热血","唯一"];
-        const QUICK_LOCATIONS = ["现场VIP坐席","现场沉浸前排","山顶灵魂席位","凌晨3点的被窝","带薪摸鱼的工位","人声鼎沸的直播间","去往赛场的飞机上"];
-        const QUICK_NAMES = ["莎头的兵","野生战术大师","气氛组组长","速效救心丸VIP","十年老粉","前排尖叫鸡","佛系护体散人"];
-        const QUICK_STARS = ["孙颖莎","王楚钦","樊振东","马龙","王曼昱","林诗栋"];
-        
+        const FAN_QUOTES = [
+            "无论巅峰低谷，我在，我们都在。",
+            "你只管在赛场上赢，我们在台下为你撑腰。",
+            "见证你的时代，是我作为球迷最大的荣幸。",
+            "踏平坎坷成大道，祝凯旋！",
+            "生日快乐！愿你岁岁平安，永远赤诚。",
+            "抢票成功！终于可以去现场看你发光了！",
+            "哪怕万人阻挡，也要光芒万丈。",
+            "你永远可以相信中国乒乓球队！",
+            "大心脏！这哪里是在打球，是在打我的命！",
+            "只要心怀热爱，永远都是当打之年。",
+            "让二追三，逆风翻盘，这就是竞技体育的魅力！",
+            "赢了一起狂，输了一起扛。",
+            "看你打球，就像在看一场惊心动魄的艺术展。",
+            "请继续在你的热爱里闪闪发光吧！"
+        ];
+
+        const STAMP_MOODS = ["见证", "荣耀", "专属", "热爱", "热血", "唯一"];
+        const QUICK_LOCATIONS = ["现场VIP坐席", "现场沉浸前排", "山顶灵魂席位", "凌晨3点的被窝", "带薪摸鱼的工位", "人声鼎沸的直播间", "去往赛场的飞机上"];
+        const QUICK_NAMES = ["莎头的兵", "野生战术大师", "气氛组组长", "速效救心丸VIP", "十年老粉", "前排尖叫鸡", "佛系护体散人"];
+        const QUICK_STARS = ["孙颖莎", "王楚钦", "樊振东", "马龙", "王曼昱", "林诗栋"];
+
         const CONTEXT_CONFIG = {
-            honor: { eventLabel:'EVENT / 赛事名称', eventOptions:["2026澳门世界杯","巴黎奥运会","WTT大满贯赛","世乒赛"], resultLabel:'MOMENT / 高光时刻', resultOptions:["夺冠","晋级","大满贯","摘金","卫冕"] },
-            birthday: { eventLabel:'THEME / 专属主题', eventOptions:["全城告白·诞辰日","岁岁平安","永远热爱","顶峰相见"], resultLabel:'BLESSING / 限定祝福', resultOptions:["生日快乐","永远健康","无病无伤","继续发光"] },
-            cheer: { eventLabel:'EVENT / 出征赛事', eventOptions:["2026澳门世界杯","巴黎奥运会","WTT大满贯赛"], resultLabel:'STATUS / 出征祈福', resultOptions:["祝凯旋","加油","必胜","剑指冠军"] },
-            ticket: { eventLabel:'EVENT / 观赛场次', eventOptions:["2026澳门世界杯","巴黎奥运会","WTT大满贯赛"], resultLabel:'STATUS / 抢票时刻', resultOptions:["抢票成功","终于等到你","现场见","见证高光"] },
-            polaroid: { eventLabel:'EVENT / 记忆场景', eventOptions:["日常训练","机场出发","赛后合影"], resultLabel:'MOMENT / 陪伴时刻', resultOptions:["永远相伴","巅峰相见","无论巅峰低谷"] }
+            honor: { eventLabel: 'EVENT / 赛事名称', eventOptions: ["2026澳门世界杯", "巴黎奥运会", "WTT大满贯赛", "世乒赛"], resultLabel: 'MOMENT / 高光时刻', resultOptions: ["夺冠", "晋级", "大满贯", "摘金", "卫冕"] },
+            birthday: { eventLabel: 'THEME / 专属主题', eventOptions: ["全城告白·诞辰日", "岁岁平安", "永远热爱", "顶峰相见"], resultLabel: 'BLESSING / 限定祝福', resultOptions: ["生日快乐", "永远健康", "无病无伤", "继续发光"] },
+            cheer: { eventLabel: 'EVENT / 出征赛事', eventOptions: ["2026澳门世界杯", "巴黎奥运会", "WTT大满贯赛"], resultLabel: 'STATUS / 出征祈福', resultOptions: ["祝凯旋", "加油", "必胜", "剑指冠军"] },
+            ticket: { eventLabel: 'EVENT / 观赛场次', eventOptions: ["2026澳门世界杯", "巴黎奥运会", "WTT大满贯赛"], resultLabel: 'STATUS / 抢票时刻', resultOptions: ["抢票成功", "终于等到你", "现场见", "见证高光"] },
+            polaroid: { eventLabel: 'EVENT / 记忆场景', eventOptions: ["日常训练", "机场出发", "赛后合影"], resultLabel: 'MOMENT / 陪伴时刻', resultOptions: ["永远相伴", "巅峰相见", "无论巅峰低谷"] }
         };
 
         const ComboInput = ({ value, setValue, placeholder, options }) => {
             const [isOpen, setIsOpen] = useState(false);
             const dropdownRef = useRef(null);
             useEffect(() => {
-                const h = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false); };
-                document.addEventListener('mousedown', h);
-                return () => document.removeEventListener('mousedown', h);
+                const handleClickOutside = (event) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsOpen(false);
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
             }, []);
             return (
                 <div className="relative w-full" ref={dropdownRef}>
                     <div className="flex items-center w-full bg-black border border-white/10 rounded-xl focus-within:border-brand-gold transition-colors overflow-hidden">
                         <input type="text" value={value} onChange={e => setValue(e.target.value)} placeholder={placeholder} className="flex-1 min-w-0 bg-transparent px-3 py-3 text-sm text-white focus:outline-none font-bold" />
-                        <button type="button" onClick={() => setIsOpen(!isOpen)} className="px-3 py-3 text-brand-gold border-l border-white/10 shrink-0 hover:bg-white/5 transition-colors"><Icon name={isOpen ? "chevron-up" : "chevron-down"} className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => setIsOpen(!isOpen)} className="px-3 py-3 text-brand-gold border-l border-white/10 shrink-0 hover:bg-white/5 transition-colors">
+                            <Icon name={isOpen ? "chevron-up" : "chevron-down"} className="w-4 h-4" />
+                        </button>
                     </div>
                     {isOpen && (
                         <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-[#1a1a1a] border border-white/10 rounded-xl z-[100] flex flex-col gap-1 shadow-[0_10px_40px_rgba(0,0,0,0.8)] max-h-48 overflow-y-auto custom-scroll">
-                            {options.map(opt => (<button key={opt} type="button" onClick={() => { setValue(opt); setIsOpen(false); }} className="text-left px-3 py-2.5 text-xs text-gray-300 bg-black/50 hover:bg-brand-gold hover:text-black rounded-lg transition-colors border border-white/5">{opt}</button>))}
+                            {options.map(opt => (
+                                <button key={opt} type="button" onClick={() => { setValue(opt); setIsOpen(false); }} className="text-left px-3 py-2.5 text-xs text-gray-300 bg-black/50 hover:bg-brand-gold hover:text-black rounded-lg transition-colors border border-white/5">{opt}</button>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -267,66 +365,130 @@
             const [quote, setQuote] = useState(FAN_QUOTES[0]);
             const [userName, setUserName] = useState('');
             const [location, setLocation] = useState(QUICK_LOCATIONS[0]);
-            const [stampMood, setStampMood] = useState(STAMP_MOODS[0]);
+            const [stampMood, setStampMood] = useState(STAMP_MOODS[0]); 
             const [fanNo, setFanNo] = useState('');
             const [isGenerating, setIsGenerating] = useState(false);
+            
             const [resultImage, setResultImage] = useState(null);
-            const resultBlobUrlRef = useRef(null);
+            const resultBlobUrlRef = useRef(null); 
+            
             const containerRef = useRef(null);
             const printRef = useRef(null);
             const [scale, setScale] = useState(1);
+
             const displayUserName = userName || '你的名字';
 
             useEffect(() => {
-                const u = () => { if (containerRef.current) setScale(containerRef.current.offsetWidth / POSTER_WIDTH); };
-                u(); window.addEventListener('resize', u); return () => window.removeEventListener('resize', u);
+                const updateScale = () => {
+                    if (containerRef.current) {
+                        setScale(containerRef.current.offsetWidth / POSTER_WIDTH);
+                    }
+                };
+                updateScale();
+                window.addEventListener('resize', updateScale);
+                return () => window.removeEventListener('resize', updateScale);
             }, []);
-            useEffect(() => { setFanNo(Math.floor(Math.random()*899999+100000).toString()); }, [template]);
+
             useEffect(() => {
-                const c = CONTEXT_CONFIG[template] || CONTEXT_CONFIG.honor;
-                setEventInfo(c.eventOptions[0]); setScore(c.resultOptions[0]);
+                setFanNo(Math.floor(Math.random() * 899999 + 100000).toString());
+            }, [template]);
+
+            useEffect(() => {
+                const context = CONTEXT_CONFIG[template] || CONTEXT_CONFIG.honor;
+                setEventInfo(context.eventOptions[0]);
+                setScore(context.resultOptions[0]);
                 if (template === 'birthday') { setQuote("愿你岁岁平安，永远赤诚。生日快乐！"); setStampMood("专属"); }
                 else if (template === 'ticket') { setQuote("终于拿到入场券！迫不及待要去现场看你发光了！"); }
                 else if (template === 'cheer') { setQuote("踏平坎坷成大道，祝凯旋！我们在大后方为你加油！"); setStampMood("热血"); }
                 else if (template === 'honor') { setQuote("见证你的时代，是我作为球迷最大的荣幸。"); setStampMood("见证"); }
             }, [template]);
 
-            const handleImageUpload = (e) => { const f=e.target.files[0]; if(f){const r=new FileReader();r.onload=(e)=>setImage(e.target.result);r.readAsDataURL(f);} };
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => setImage(e.target.result);
+                    reader.readAsDataURL(file);
+                }
+            };
 
-            /* ========== 核心改动：用 snapdom 替换 html2canvas ========== */
             const handleDownload = async () => {
                 if (!printRef.current) return;
                 setIsGenerating(true);
-                if (resultBlobUrlRef.current) { URL.revokeObjectURL(resultBlobUrlRef.current); resultBlobUrlRef.current = null; }
+
+                if (resultBlobUrlRef.current) {
+                    URL.revokeObjectURL(resultBlobUrlRef.current);
+                    resultBlobUrlRef.current = null;
+                }
+
                 try {
-                    try { if(document.fonts&&document.fonts.ready) await Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1500))]); } catch(e){}
+                    try {
+                        if (document && document.fonts && document.fonts.ready) {
+                            await Promise.race([
+                                document.fonts.ready,
+                                new Promise(resolve => setTimeout(resolve, 1500))
+                            ]);
+                        }
+                    } catch(err) {
+                        console.warn("Font loading wait skipped or timed out: ", err);
+                    }
+
+                    // 强制回流，确保微信排版引擎完成计算
                     void printRef.current.offsetHeight;
-                    await new Promise(r => setTimeout(r, 400));
-                    
-                    /* * snapdom 核心：它直接利用浏览器的原生渲染机制（SVG foreignObject）
-                     * 彻底规避了旧版 js 引擎算错 CSS（比如 Flexbox 和 行高塌陷）的问题。
-                     * 预览时是对的，截图就 100% 是对的！
-                     */
-                    const blob = await snapdom.toBlob(printRef.current, {
+                    await new Promise(r => setTimeout(r, 300));
+
+                    const canvas = await html2canvas(printRef.current, { 
                         scale: 3, 
-                        embedFonts: true
+                        useCORS: true, 
+                        backgroundColor: '#050505',
+                        width: POSTER_WIDTH,
+                        height: POSTER_HEIGHT,
+                        windowWidth: POSTER_WIDTH,
+                        windowHeight: POSTER_HEIGHT
                     });
-                    
-                    const url = URL.createObjectURL(blob);
-                    resultBlobUrlRef.current = url;
-                    setResultImage(url);
-                } catch(error) {
-                    console.error(error);
-                    alert('海报生成失败：\n' + (error.message || '未知错误'));
-                } finally { setIsGenerating(false); }
+
+                    const blob = await new Promise((resolve, reject) => {
+                        canvas.toBlob(
+                            (b) => b ? resolve(b) : reject(new Error('toBlob 返回 null')),
+                            'image/png'
+                        );
+                    });
+
+                    const blobUrl = URL.createObjectURL(blob);
+                    resultBlobUrlRef.current = blobUrl;
+                    setResultImage(blobUrl);
+
+                } catch (error) { 
+                    console.error(error); 
+                    alert('海报生成失败：\n' + (error.message || error.toString() || '未知渲染错误，请刷新重试'));
+                } finally { 
+                    setIsGenerating(false); 
+                }
             };
 
             const triggerActualDownload = () => {
                 if (!resultImage) return;
-                if (isWechat()) { alert('请长按上方海报图片，选择「保存图片」即可保存高清原图到相册'); return; }
-                const a = document.createElement('a'); a.download = `热爱印记_${athlete}_${Date.now()}.png`; a.href = resultImage;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+                if (isWechat()) {
+                    alert('请长按上方海报图片，选择「保存图片」即可保存高清原图到相册');
+                    return;
+                }
+
+                const link = document.createElement('a');
+                link.download = `热爱印记_${athlete}_${Date.now()}.png`;
+                link.href = resultImage;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             };
+
+            useEffect(() => {
+                return () => {
+                    if (resultBlobUrlRef.current) {
+                        URL.revokeObjectURL(resultBlobUrlRef.current);
+                    }
+                };
+            }, []);
 
             const posterProps = { template, image, athlete, eventInfo, score, quote, displayUserName, location, stampMood, fanNo };
 
@@ -337,24 +499,26 @@
                             <div className="w-7 h-7 rounded bg-brand-red flex items-center justify-center"><Icon name="award" className="w-4 h-4 text-white" /></div>
                             <h1 className="text-lg font-black tracking-widest text-white italic uppercase font-sans">Match Moment</h1>
                         </div>
-                        <div className="text-[10px] text-gray-500 font-bold border border-gray-800 px-2 py-1 rounded" style={{fontFamily:F_SANS}}>获取更多应援模板</div>
+                        <div className="text-[10px] text-gray-500 font-bold border border-gray-800 px-2 py-1 rounded" style={{ fontFamily: F_SANS }}>获取更多应援模板</div>
                     </div>
 
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
-                        <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center z-10" style={{height:`${POSTER_HEIGHT*scale}px`}}>
-                            <div style={{transform:`scale(${scale})`,transformOrigin:'top left',position:'absolute',top:0,left:0,width:`${POSTER_WIDTH}px`,height:`${POSTER_HEIGHT}px`}}>
+                        
+                        <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center z-10" style={{ height: `${POSTER_HEIGHT * scale}px` }}>
+                            <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute', top: 0, left: 0, width: `${POSTER_WIDTH}px`, height: `${POSTER_HEIGHT}px` }}>
                                 <Poster {...posterProps} />
                             </div>
                         </div>
 
+                        {/* 真正的截图源：定位到屏幕左上角(0,0)，opacity: 0 防止跳过渲染！ */}
                         <div className="offscreen-render-target" aria-hidden="true">
                             <Poster ref={printRef} {...posterProps} />
                         </div>
                         
                         {!image && (
-                            <label className="absolute top-[80px] left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center justify-center cursor-pointer bg-black/60 backdrop-blur-sm group p-10 rounded-xl" style={{width:`${POSTER_WIDTH*scale}px`,height:`${POSTER_HEIGHT*scale}px`}}>
+                            <label className="absolute top-[80px] left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center justify-center cursor-pointer bg-black/60 backdrop-blur-sm group p-10 rounded-xl" style={{ width: `${POSTER_WIDTH * scale}px`, height: `${POSTER_HEIGHT * scale}px` }}>
                                 <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Icon name="image-plus" className="w-8 h-8 text-white" /></div>
-                                <span className="text-white text-sm font-bold tracking-widest drop-shadow-md" style={{fontFamily:F_SANS}}>点击上传照片，应用此排版</span>
+                                <span className="text-white text-sm font-bold tracking-widest drop-shadow-md" style={{ fontFamily: F_SANS }}>点击上传照片，应用此排版</span>
                                 <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                             </label>
                         )}
@@ -365,48 +529,128 @@
                             </label>
                         )}
 
-                        <div className="bg-brand-panel p-5 rounded-2xl border border-white/5 space-y-5">
-                             <div className="space-y-2">
-                                <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase" style={{fontFamily:F_SANS}}>Scene / 核心场景</label>
-                                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                                    {[{id:'honor',label:'荣耀见证',icon:'award'},{id:'birthday',label:'生日限定',icon:'cake'},{id:'cheer',label:'出征祈福',icon:'flame'},{id:'ticket',label:'入场确认',icon:'ticket'},{id:'polaroid',label:'陪伴日记',icon:'book-open'}].map(t=>(
-                                        <button key={t.id} onClick={()=>setTemplate(t.id)} className={`flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all border shrink-0 min-w-[72px] ${template===t.id?'bg-brand-red border-brand-red text-white shadow-lg':'bg-white/5 border-white/10 text-gray-500'}`}>
-                                            <Icon name={t.icon} className="w-4 h-4 mb-1" /><span className="text-[10px] font-bold tracking-widest">{t.label}</span>
-                                        </button>
-                                    ))}
+                        <div className="flex flex-col gap-5 mt-4">
+                            <div className="bg-brand-panel p-5 rounded-2xl border border-white/5 space-y-5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase" style={{ fontFamily: F_SANS }}>Scene / 核心场景</label>
+                                    <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                        {[ { id: 'honor', label: '荣耀见证', icon: 'award' }, { id: 'birthday', label: '生日限定', icon: 'cake' }, { id: 'cheer', label: '出征祈福', icon: 'flame' }, { id: 'ticket', label: '入场确认', icon: 'ticket' }, { id: 'polaroid', label: '陪伴日记', icon: 'book-open' } ].map(t => (
+                                            <button key={t.id} onClick={() => setTemplate(t.id)} className={`flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all border shrink-0 min-w-[72px] ${template === t.id ? 'bg-brand-red border-brand-red text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white hover:bg-white/10'}`} style={{ fontFamily: F_SANS }}>
+                                                <Icon name={t.icon} className="w-4 h-4 mb-1" /><span className="text-[10px] font-bold tracking-widest">{t.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="p-3 bg-black/30 border border-white/5 rounded-xl space-y-4">
-                                <div className="space-y-1.5"><label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">{currentContext.eventLabel}</label><ComboInput value={eventInfo} setValue={setEventInfo} options={currentContext.eventOptions} /></div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5"><label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">运动员</label><ComboInput value={athlete} setValue={setAthlete} options={QUICK_STARS} /></div>
-                                    <div className="space-y-1.5"><label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">{currentContext.resultLabel}</label><ComboInput value={score} setValue={setScore} options={currentContext.resultOptions} /></div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5"><label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">署名</label><ComboInput value={userName} setValue={setUserName} options={QUICK_NAMES} /></div>
-                                    <div className="space-y-1.5"><label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">坐标</label><ComboInput value={location} setValue={setLocation} options={QUICK_LOCATIONS} /></div>
-                                </div>
-                                {['honor','birthday','ticket'].includes(template)&&(
-                                    <div className="space-y-1.5"><label className="text-[10px] text-gray-500 font-black tracking-widest uppercase flex justify-between"><span>No. / 专属编号</span><button onClick={()=>setFanNo(Math.floor(Math.random()*899999+100000).toString())} className="text-brand-gold font-bold">随机</button></label><input type="text" value={fanNo} onChange={e=>setFanNo(e.target.value.slice(0,8))} className="w-full bg-black border border-white/10 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-brand-gold" /></div>
+                                {(template === 'honor' || template === 'birthday') && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase" style={{ fontFamily: F_SANS }}>Stamp / 印章情绪</label>
+                                        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                            {STAMP_MOODS.map(mood => (<button key={mood} onClick={() => setStampMood(mood)} className={`px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all ${stampMood === mood ? 'bg-brand-gold text-black' : 'bg-white/5 text-gray-400'}`} style={{ fontFamily: F_SANS }}>{mood}</button>))}
+                                        </div>
+                                    </div>
                                 )}
-                                <div className="space-y-1.5"><label className="text-[10px] text-gray-500 font-black tracking-widest uppercase flex justify-between"><span>Message / 想说的话</span><button onClick={()=>setQuote(FAN_QUOTES[Math.floor(Math.random()*FAN_QUOTES.length)])} className="text-brand-gold font-bold">换一句</button></label><textarea value={quote} onChange={e=>setQuote(e.target.value)} rows="2" className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-gold outline-none resize-none leading-relaxed" /></div>
+                                <div className="p-3 bg-black/30 border border-white/5 rounded-xl space-y-4">
+                                    <div className="space-y-1.5" style={{ fontFamily: F_SANS }}>
+                                        <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">{currentContext.eventLabel} <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
+                                        <ComboInput value={eventInfo} setValue={setEventInfo} placeholder={`输入或选择...`} options={currentContext.eventOptions} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4" style={{ fontFamily: F_SANS }}>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">Target / 运动员 <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
+                                            <ComboInput value={athlete} setValue={setAthlete} placeholder="输入运动员" options={QUICK_STARS} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] text-brand-gold font-black tracking-widest uppercase">{currentContext.resultLabel} <span className="lowercase text-gray-500 font-normal tracking-normal">(可填)</span></label>
+                                            <ComboInput value={score} setValue={setScore} placeholder={`输入或选择...`} options={currentContext.resultOptions} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4" style={{ fontFamily: F_SANS }}>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">ID / 你的署名 <span className="lowercase text-gray-600 font-normal tracking-normal">(可填)</span></label>
+                                        <ComboInput value={userName} setValue={setUserName} placeholder="输入昵称" options={QUICK_NAMES} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Loc / 观赛坐标 <span className="lowercase text-gray-600 font-normal tracking-normal">(可填)</span></label>
+                                        <ComboInput value={location} setValue={setLocation} placeholder="选择坐标" options={QUICK_LOCATIONS} />
+                                    </div>
+                                </div>
+
+                                {['honor', 'birthday', 'ticket'].includes(template) && (
+                                    <div className="space-y-1.5" style={{ fontFamily: F_SANS }}>
+                                        <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase flex justify-between">
+                                            <span>No. / 专属编号 <span className="lowercase text-gray-600 font-normal tracking-normal">(可填)</span></span>
+                                            <button type="button" onClick={() => setFanNo(Math.floor(Math.random() * 899999 + 100000).toString())} className="text-brand-gold font-bold">随机生成</button>
+                                        </label>
+                                        <div className="flex items-center w-full bg-black border border-white/10 rounded-xl focus-within:border-brand-gold transition-colors overflow-hidden">
+                                            <input 
+                                                type="text" 
+                                                value={fanNo} 
+                                                onChange={e => setFanNo(e.target.value.slice(0, 8))} 
+                                                placeholder="输入专属印记编号 (建议不超过6位)" 
+                                                className="flex-1 min-w-0 bg-transparent px-3 py-3 text-sm text-white focus:outline-none font-bold tracking-widest" 
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-1.5" style={{ fontFamily: F_SANS }}>
+                                    <label className="text-[10px] text-gray-500 font-black tracking-widest uppercase flex justify-between"><span>Message / 想说的话</span><button onClick={() => setQuote(FAN_QUOTES[Math.floor(Math.random()*FAN_QUOTES.length)])} className="text-brand-gold font-bold">随机换一句</button></label>
+                                    <textarea value={quote} onChange={e => setQuote(e.target.value)} rows="2" className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-brand-gold outline-none resize-none leading-relaxed" />
+                                </div>
                             </div>
                         </div>
-
-                        <button onClick={handleDownload} disabled={!image||isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl ${!image?'bg-gray-800 text-gray-600':'bg-brand-red text-white active:scale-95'}`} style={{fontFamily:F_SANS}}>
+                        <button onClick={handleDownload} disabled={!image || isGenerating} className={`w-full py-4.5 rounded-xl font-black text-lg transition-all flex justify-center items-center gap-2 shadow-2xl ${!image ? 'bg-gray-800 text-gray-600' : 'bg-brand-red text-white active:scale-95'}`} style={{ fontFamily: F_SANS }}>
                             {isGenerating ? '正在生成海报...' : <><Icon name="download" className="w-5 h-5" /> 生成专属海报</>}
                         </button>
+                        <div className="text-center" style={{ fontFamily: F_SANS }}>
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest">长按图片可保存分享至朋友圈/小红书</p>
+                            <p className="text-[10px] text-gray-600 font-bold tracking-widest mt-1">关注公众号：热爱印记，获取更多专属应援模板</p>
+                        </div>
                     </div>
 
                     {resultImage && (
-                        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in" style={{fontFamily:F_SANS}}>
+                        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-5 backdrop-blur-md animate-fade-in" style={{ fontFamily: F_SANS }}>
                             <div className="w-full max-w-sm flex flex-col items-center">
-                                {isWechat()&&(<div className="w-full bg-green-900/80 border border-green-500/30 rounded-xl px-4 py-3 mb-4 flex items-center gap-3"><span className="text-green-400 text-lg flex-shrink-0">💡</span><span className="text-green-200 text-xs font-bold leading-relaxed">微信内请<span className="text-green-400">「长按海报」</span>选择保存图片</span></div>)}
-                                <img src={resultImage} alt="专属海报" className="w-full rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] mb-6" style={{ pointerEvents:'auto', WebkitTouchCallout:'default', userSelect:'auto', WebkitUserSelect:'auto', display:'block' }} />
-                                <button onClick={triggerActualDownload} className="w-full bg-brand-red hover:bg-red-700 text-white px-6 py-3.5 rounded-full font-black text-lg mb-3 shadow-[0_0_20px_rgba(230,0,18,0.4)] flex items-center justify-center gap-2 transition-transform active:scale-95">
-                                    <Icon name="download" className="w-5 h-5" />{isWechat()?'长按上方海报保存':'点击保存相册'}
+
+                                {isWechat() && (
+                                    <div className="w-full bg-gradient-to-r from-green-900/80 to-green-800/80 border border-green-500/30 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+                                        <span className="text-green-400 text-lg flex-shrink-0">💡</span>
+                                        <span className="text-green-200 text-xs font-bold leading-relaxed">微信内请<span className="text-green-400">「长按海报」</span>选择保存图片，即可获得高清原图</span>
+                                    </div>
+                                )}
+
+                                <img 
+                                    src={resultImage} 
+                                    alt="专属海报" 
+                                    className="w-full rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] mb-6" 
+                                    style={{ pointerEvents: 'auto', WebkitTouchCallout: 'default', userSelect: 'auto', WebkitUserSelect: 'auto', display: 'block' }} 
+                                />
+                                
+                                <button 
+                                    onClick={triggerActualDownload} 
+                                    className="w-full bg-brand-red hover:bg-red-700 text-white px-6 py-3.5 rounded-full font-black text-lg mb-3 shadow-[0_0_20px_rgba(230,0,18,0.4)] flex items-center justify-center gap-2 transition-transform active:scale-95"
+                                >
+                                    <Icon name="download" className="w-5 h-5" />
+                                    {isWechat() ? '长按上方海报保存高清图' : '点击保存相册 (或长按海报)'}
                                 </button>
-                                <button onClick={() => { if(resultBlobUrlRef.current) { URL.revokeObjectURL(resultBlobUrlRef.current); resultBlobUrlRef.current=null; } setResultImage(null); }} className="text-gray-500 text-sm border-b border-gray-600 pb-1 hover:text-white transition-colors font-bold">返回修改</button>
+                                
+                                <p className="text-gray-400 text-xs mb-6 text-center">
+                                    {isWechat() 
+                                        ? '💡 长按海报 → 选择「保存图片」→ 高清原图直达相册' 
+                                        : '💡 若点击失败，请直接长按上方海报保存'
+                                    }
+                                </p>
+                                
+                                <button onClick={() => {
+                                    if (resultBlobUrlRef.current) {
+                                        URL.revokeObjectURL(resultBlobUrlRef.current);
+                                        resultBlobUrlRef.current = null;
+                                    }
+                                    setResultImage(null);
+                                }} className="text-gray-500 text-sm border-b border-gray-600 pb-1 hover:text-white transition-colors font-bold">
+                                    返回继续修改
+                                </button>
                             </div>
                         </div>
                     )}
