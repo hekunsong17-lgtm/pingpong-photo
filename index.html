@@ -54,7 +54,7 @@
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         
         /* * ========== 终极修复：截图源容器 ==========
-         * 退回 V5 方案，但移除了 opacity: 0 和 overflow: hidden
+         * 退回 V5 方案，移除了 opacity: 0 和 overflow: hidden
          * 仅使用 left: -9999px 移出屏幕。让 snapdom 完美捕获整个节点的真实尺寸！
          */
         .offscreen-render {
@@ -104,23 +104,26 @@
 
         /* * 返回 V5 版本稳定、自然的 Flexbox 布局
          * 在 Snapdom 下这套代码渲染完美且不错位
+         * * 针对性修复：
+         * 1. 根节点用 clipPath: 'inset(0)' 替换 overflow-hidden
+         * 2. 内层 absolute 容器用确定的 width: 420px, height: 560px 锁死尺寸
          */
         const Poster = forwardRef(({ template, image, athlete, eventInfo, score, quote, displayUserName, location, stampMood, fanNo }, ref) => {
             const renderBackground = (filterClass) => {
-                if (image) return <img src={image} className={`w-full h-full object-cover absolute inset-0 z-0 ${filterClass}`} crossOrigin="anonymous" />;
-                return <div className={`w-full h-full absolute inset-0 z-0 bg-[#111111] flex items-center justify-center ${filterClass}`}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
+                if (image) return <img src={image} style={{ width: '420px', height: '560px', objectFit: 'cover', position: 'absolute', top: 0, left: 0, display: 'block' }} className={filterClass} crossOrigin="anonymous" />;
+                return <div className={filterClass} style={{ width: '420px', height: '560px', position: 'absolute', top: 0, left: 0, backgroundColor: '#111111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="image" className="w-12 h-12 opacity-10" /></div>;
             };
 
             return (
-                <div ref={ref} className="relative overflow-hidden bg-black isolate" style={{ width:'420px', height:'560px', WebkitTextSizeAdjust:'100%', textSizeAdjust:'100%' }}>
-                    <div className="absolute inset-0 noise-bg z-[5]"></div>
+                <div ref={ref} className="relative bg-black isolate" style={{ width:'420px', height:'560px', clipPath: 'inset(0)', WebkitTextSizeAdjust:'100%', textSizeAdjust:'100%' }}>
+                    <div className="noise-bg" style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', zIndex: 5 }}></div>
                     
                     {(template === 'honor' || template === 'birthday') && (
                         <>
                             {renderBackground(template === 'birthday' ? 'filter-birthday' : 'filter-honor')}
-                            <div className="absolute inset-0 z-10" style={{ background: template === 'birthday' ? 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(255,183,197,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', zIndex: 10, background: template === 'birthday' ? 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(255,183,197,0.1) 100%)' : 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
                             
-                            <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, zIndex:20, display:'flex', flexDirection:'column', padding:'24px', boxSizing:'border-box' }}>
+                            <div style={{ position:'absolute', top:0, left:0, width: '420px', height: '560px', zIndex:20, display:'flex', flexDirection:'column', padding:'24px', boxSizing:'border-box' }}>
                                 <div style={{ alignSelf:'flex-end', textAlign:'right' }}>
                                     <div style={{ fontSize:'10px', fontWeight:'bold', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:'2px', color:'#E0E0E0', fontFamily:F_SANS }}>{template === 'birthday' ? '生日限定' : '专属生成'}</div>
                                     <div style={{ fontSize:'12px', fontWeight:900, letterSpacing:'0.2em', fontStyle:'italic', fontFamily:F_SANS, color: template === 'birthday' ? '#FFB7C5' : '#D4AF37' }}>热爱印记</div>
@@ -156,8 +159,8 @@
                     {template === 'cheer' && (
                         <>
                             {renderBackground('filter-cheer')}
-                            <div className="absolute inset-0 z-10" style={{ background:'linear-gradient(to top, rgba(69,10,10,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
-                            <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, zIndex:20, display:'flex', flexDirection:'column', padding:'24px', boxSizing:'border-box' }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', zIndex: 10, background:'linear-gradient(to top, rgba(69,10,10,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)' }}></div>
+                            <div style={{ position:'absolute', top:0, left:0, width: '420px', height: '560px', zIndex:20, display:'flex', flexDirection:'column', padding:'24px', boxSizing:'border-box' }}>
                                 <div style={{ position:'absolute', top:'32px', left:'24px', fontSize:'72px', color:'#E60012', fontWeight:900, fontStyle:'italic', opacity:0.2, transform:'rotate(-6deg)', fontFamily:F_SERIF }}>战</div>
                                 <div style={{ alignSelf:'flex-end', textAlign:'right' }}>
                                     <div style={{ fontSize:'10px', fontWeight:700, textTransform:'uppercase', marginBottom:'2px', color:'#fff', fontFamily:F_SANS }}>出征祈福</div>
@@ -195,8 +198,8 @@
                     {template === 'ticket' && (
                         <>
                             {renderBackground('filter-ticket')}
-                            <div className="absolute inset-0 bg-black/60 z-10"></div>
-                            <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, padding:'16px', boxSizing:'border-box', zIndex:20 }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '420px', height: '560px', backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10 }}></div>
+                            <div style={{ position:'absolute', top:0, left:0, width: '420px', height: '560px', padding:'16px', boxSizing:'border-box', zIndex:20 }}>
                                 <div style={{ border:'3px solid rgba(255,255,255,0.8)', display:'flex', flexDirection:'column', height:'100%', boxSizing:'border-box' }}>
                                     <div style={{ height:'40px', backgroundColor:'#E60012', color:'#fff', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'0 16px', flexShrink:0 }}>
                                         <div style={{ fontSize:'12px', fontWeight:900, fontFamily:F_SANS }}>专属入场券</div>
@@ -234,7 +237,7 @@
                     )}
 
                     {template === 'polaroid' && (
-                        <div className="absolute inset-0 z-20" style={{ backgroundColor:'#f5f5dc', display:'flex', flexDirection:'column', padding:'24px', boxSizing:'border-box' }}>
+                        <div style={{ position:'absolute', top:0, left:0, width: '420px', height: '560px', zIndex:20, backgroundColor:'#f5f5dc', display:'flex', flexDirection:'column', padding:'24px', boxSizing:'border-box' }}>
                             <div style={{ flexGrow:1, backgroundColor:'#000', position:'relative', overflow:'hidden', boxShadow:'inset 0 0 20px rgba(0,0,0,0.8)' }}>{renderBackground('filter-polaroid')}</div>
                             <div style={{ display:'flex', flexDirection:'column', justifyContent:'flex-end', paddingTop:'24px', flexShrink:0 }}>
                                 <div style={{ color:'#333', fontSize:'13px', fontWeight:900, lineHeight:1.6, letterSpacing:'0.05em', fontFamily:F_SERIF }}>
@@ -335,18 +338,22 @@
                 if (resultBlobUrlRef.current) { URL.revokeObjectURL(resultBlobUrlRef.current); resultBlobUrlRef.current = null; }
 
                 try {
-                    // 等待字体加载
                     try { if(document.fonts) await Promise.race([document.fonts.ready, new Promise(r=>setTimeout(r,2000))]); } catch(e){}
-                    
-                    // 等一帧确保渲染完成
                     await new Promise(r => setTimeout(r, 200));
 
                     /*
-                     * snapdom 核心调用
-                     * 完美兼容在左侧 -9999px 外的容器
+                     * 使用明确的 width: 840, height: 1120，配合 scale: 2 (或者在style里transform)
+                     * 可以精准控制输出一张2倍的高清图，且严格截取 420x560 区域。
                      */
                     const blob = await snapdom.toBlob(printRef.current, {
-                        scale: 3,
+                        width: 840,
+                        height: 1120,
+                        style: {
+                            transform: 'scale(2)',
+                            transformOrigin: 'top left',
+                            width: '420px',
+                            height: '560px'
+                        },
                         embedFonts: true,
                     });
 
@@ -381,7 +388,6 @@
                     </div>
 
                     <div className="w-full max-w-md px-5 flex flex-col gap-6 mt-2 relative">
-                        
                         {/* 前台预览框 */}
                         <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden shadow-2xl bg-[#0a0a0a] border border-white/5 flex justify-center z-10" style={{height:`${POSTER_HEIGHT*scale}px`}}>
                             <div style={{transform:`scale(${scale})`,transformOrigin:'top left',position:'absolute',top:0,left:0,width:`${POSTER_WIDTH}px`,height:`${POSTER_HEIGHT}px`}}>
